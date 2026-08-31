@@ -1,0 +1,7 @@
+{
+  "name": "Vítkovice Quest",
+  "description": "Interaktivní outdoorová a týmová hra s QR kódy, úkoly, mapou a živým vyhodnocením výsledků",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
