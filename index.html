@@ -1,0 +1,1923 @@
+﻿<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vítkovice Quest</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #1a1a2e;
+            --text-secondary: #6b7280;
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --radius: 16px;
+            --nav-height: 70px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card-bg: #1e293b;
+                --text: #f1f5f9;
+                --text-secondary: #94a3b8;
+                --primary: #60a5fa;
+                --primary-dark: #3b82f6;
+                --border: #334155;
+                --shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+                --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.3);
+            }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+        }
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease;
+        }
+        .screen.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes scorePop {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes confetti {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 24px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            min-height: 56px;
+            width: 100%;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--accent); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--border); color: var(--text); }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        .btn-sm { padding: 10px 16px; font-size: 14px; min-height: 44px; width: auto; }
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .card-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            background: var(--card-bg);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input:focus { border-color: var(--primary); }
+        .input::placeholder { color: var(--text-secondary); }
+        select.input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+        textarea.input { min-height: 100px; resize: vertical; }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-title { font-size: 20px; font-weight: 700; }
+        .header-back {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: calc(var(--nav-height) + 20px);
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--nav-height);
+            background: var(--card-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .nav-item.active { color: var(--primary); }
+        .nav-item .nav-icon { font-size: 24px; }
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--text);
+            color: var(--bg);
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+            box-shadow: var(--shadow-lg);
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .progress-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .station-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .station-card:active { transform: scale(0.98); }
+        .station-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .station-icon.gps { background: #dbeafe; }
+        .station-icon.qr { background: #fef3c7; }
+        .station-icon.quiz { background: #d1fae5; }
+        .station-icon.photo { background: #fce7f3; }
+        .station-icon.team { background: #e0e7ff; }
+        .station-icon.logic { background: #f3e8ff; }
+        .station-icon.info { background: #ccfbf1; }
+        .station-icon.text { background: #fef3c7; }
+        .station-icon.number { background: #dbeafe; }
+        @media (prefers-color-scheme: dark) {
+            .station-icon.gps { background: #1e3a5f; }
+            .station-icon.qr { background: #5f4a1e; }
+            .station-icon.quiz { background: #1e5f3a; }
+            .station-icon.photo { background: #5f1e3a; }
+            .station-icon.team { background: #2a1e5f; }
+            .station-icon.logic { background: #4a1e5f; }
+            .station-icon.info { background: #1e5f4a; }
+            .station-icon.text { background: #5f4a1e; }
+            .station-icon.number { background: #1e3a5f; }
+        }
+        .station-info { flex: 1; min-width: 0; }
+        .station-name { font-weight: 700; font-size: 16px; margin-bottom: 2px; }
+        .station-meta { font-size: 13px; color: var(--text-secondary); }
+        .station-status {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .station-status.locked { background: var(--border); color: var(--text-secondary); }
+        .station-status.available { background: #dbeafe; color: var(--primary); }
+        .station-status.completed { background: #d1fae5; color: var(--accent); }
+        @media (prefers-color-scheme: dark) {
+            .station-status.available { background: #1e3a5f; }
+            .station-status.completed { background: #1e5f3a; }
+        }
+        .score-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            z-index: 2000;
+            text-align: center;
+            animation: scorePop 0.5s ease;
+            border: 2px solid var(--accent);
+        }
+        .score-popup h2 { font-size: 48px; color: var(--accent); margin-bottom: 8px; }
+        .score-popup p { font-size: 18px; color: var(--text-secondary); }
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .overlay.active { display: flex; }
+        .modal {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+        .form-hint { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        .option-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            background: var(--card-bg);
+            cursor: pointer;
+            font-size: 14px;
+            margin: 4px;
+            transition: all 0.2s;
+        }
+        .option-chip.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+        }
+        .leaderboard-rank {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .leaderboard-rank.gold { background: #fef3c7; color: #d97706; }
+        .leaderboard-rank.silver { background: #f3f4f6; color: #6b7280; }
+        .leaderboard-rank.bronze { background: #fef3c7; color: #b45309; }
+        @media (prefers-color-scheme: dark) {
+            .leaderboard-rank.gold { background: #5f4a1e; color: #fbbf24; }
+            .leaderboard-rank.silver { background: #374151; color: #9ca3af; }
+            .leaderboard-rank.bronze { background: #5f3a1e; color: #f59e0b; }
+        }
+        #map-container { height: 100%; width: 100%; border-radius: var(--radius); overflow: hidden; }
+        .qr-reader { width: 100%; border-radius: var(--radius); overflow: hidden; }
+        #qr-reader video { border-radius: var(--radius); }
+        .photo-preview {
+            width: 100%;
+            border-radius: var(--radius);
+            margin-top: 12px;
+            border: 2px solid var(--border);
+        }
+        .camera-container {
+            position: relative;
+            width: 100%;
+            border-radius: var(--radius);
+            overflow: hidden;
+            background: #000;
+        }
+        .camera-container video, .camera-container img {
+            width: 100%;
+            display: block;
+            border-radius: var(--radius);
+        }
+        .timer {
+            font-size: 48px;
+            font-weight: 700;
+            text-align: center;
+            padding: 20px;
+            font-variant-numeric: tabular-nums;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: var(--border);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .tab-item {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .tab-item.active { background: var(--card-bg); color: var(--primary); box-shadow: var(--shadow); }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-primary { background: #dbeafe; color: var(--primary); }
+        .badge-success { background: #d1fae5; color: #059669; }
+        .badge-warning { background: #fef3c7; color: #d97706; }
+        @media (prefers-color-scheme: dark) {
+            .badge-primary { background: #1e3a5f; color: #60a5fa; }
+            .badge-success { background: #1e5f3a; color: #34d399; }
+            .badge-warning { background: #5f4a1e; color: #fbbf24; }
+        }
+        .hidden { display: none !important; }
+        .student-mode .hide-in-student-mode { display: none !important; }
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 8px; }
+        .mt-4 { margin-top: 16px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-4 { margin-bottom: 16px; }
+        .gap-2 { gap: 8px; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .w-full { width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+
+    <!-- TEACHER HOME (ROOT ROUTE) -->
+    <div id="screen-teacher-login" class="screen active">
+        <div class="content" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 100vh;">
+            <div style="font-size: 64px; margin-bottom: 20px;">👨‍🏫</div>
+            <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Učitelský režim</h2>
+            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 30px;">Přístup pro učitele</p>
+            <div style="width: 100%; max-width: 340px;">
+                <button class="btn btn-primary" onclick="teacherLogin()">Přejít do dashboardu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDENT JOIN (ROUTE: /hra/:roomId) -->
+    <div id="screen-student-join" class="screen">
+        <div class="content" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 100vh;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🎮</div>
+            <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Připojit se ke hře</h2>
+            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 30px;">Zadejte název svého týmu a spusťte hru</p>
+            <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 12px;">
+                <input type="text" id="student-join-code" class="input hidden" readonly>
+                <input type="text" id="student-join-team" class="input" placeholder="Číslo pokoje" maxlength="30">
+                <button class="btn btn-primary" onclick="completeStudentJoin()">▶️ Spustit hru</button>
+            </div>
+        </div>
+    </div>
+    <!-- TEACHER DASHBOARD -->
+    <div id="screen-teacher-dashboard" class="screen">
+        <div class="header">
+            <span class="header-title">Učitelský režim</span>
+            <button class="btn btn-sm btn-danger" onclick="teacherLogout()">Odhlásit</button>
+        </div>
+        <div class="content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 18px; font-weight: 700;">Hry</h2>
+                <button class="btn btn-sm btn-primary" onclick="createNewGame()">+ Nová hra</button>
+            </div>
+            <div id="games-list"></div>
+            <div id="no-games" class="empty-state">
+                <div class="empty-icon">📋</div>
+                <h3>Žádné hry</h3>
+                <p>Vytvořte první hru pro studenty</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATION BUILDER -->
+    <div id="screen-station-builder" class="screen">
+        <div class="header">
+            <button class="header-back" onclick="showScreen('teacher-dashboard')">←</button>
+            <span class="header-title" id="builder-title">Nové stanoviště</span>
+            <div style="width: 40px;"></div>
+        </div>
+        <div class="content">
+            <div id="builder-form-container">
+                <div class="form-group">
+                    <label class="form-label">Název stanoviště</label>
+                    <input type="text" id="station-name" class="input" placeholder="Např. Hlavní vchod">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Popis</label>
+                    <textarea id="station-description" class="input" placeholder="Popis úkolu pro studenty"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Typ stanoviště</label>
+                    <select id="station-type" class="input" onchange="updateStationForm()">
+                        <option value="info">ℹ️ Informační stanoviště</option>
+                        <option value="gps">📍 GPS kontrola</option>
+                        <option value="qr">📱 QR kód</option>
+                        <option value="quiz">❓ Kvíz</option>
+                        <option value="photo">📸 Fotografický úkol</option>
+                        <option value="team-challenge">👥 Týmová výzva</option>
+                        <option value="logic">🧠 Logická úloha</option>
+                        <option value="text">📝 Textová odpověď</option>
+                        <option value="number">🔢 Číselná odpověď</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Počet bodů</label>
+                    <input type="number" id="station-points" class="input" value="100" min="0">
+                </div>
+                <div id="gps-fields" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Zeměpisná šířka (lat)</label>
+                        <input type="number" step="any" id="station-lat" class="input" placeholder="49.8346">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Zeměpisná délka (lng)</label>
+                        <input type="number" step="any" id="station-lng" class="input" placeholder="18.1617">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Poloměr (metry)</label>
+                        <input type="number" id="station-radius" class="input" value="50" min="1">
+                        <p class="form-hint">Student se musí nacházet do této vzdálenosti od cíle</p>
+                    </div>
+                </div>
+                <div id="qr-fields" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Text QR kódu</label>
+                        <input type="text" id="station-qr-text" class="input" placeholder="Např. VITKOVICE2024">
+                        <p class="form-hint">Student naskenuje tento kód pro ověření</p>
+                    </div>
+                </div>
+                <div id="quiz-fields" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Otázka</label>
+                        <textarea id="quiz-question" class="input" placeholder="Zadejte otázku"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Odpovědi (každou na nový řádek)</label>
+                        <textarea id="quiz-options" class="input" placeholder="Odpověď A`nOdpověď B`nOdpověď C`nOdpověď D" oninput="updateQuizCorrectOptions()"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Správná odpověď</label>
+                        <select id="quiz-correct" class="input">
+                            <option value="">-- Vyberte odpověď --</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="logic-fields" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Logická úloha</label>
+                        <textarea id="logic-question" class="input" placeholder="Zadejte logickou úlohu"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Správná odpověď</label>
+                        <input type="text" id="logic-correct" class="input" placeholder="Správná odpověď">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nápověda</label>
+                        <input type="text" id="logic-hint" class="input" placeholder="Nápověda při nesplnění">
+                    </div>
+                </div>
+                <div id="text-fields" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Otázka</label>
+                        <textarea id="text-question" class="input" placeholder="Zadejte otázku"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Správná odpověď</label>
+                        <input type="text" id="text-correct" class="input" placeholder="Přesný text správné odpovědi">
+                        <p class="form-hint">Odpověď se porovnává bez ohledu na malá/velká písmena</p>
+                    </div>
+                </div>
+                <div id="number-fields" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Otázka</label>
+                        <textarea id="number-question" class="input" placeholder="Zadejte otázku"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Správná odpověď (číslo)</label>
+                        <input type="number" id="number-correct" class="input" placeholder="123">
+                    </div>
+                </div>
+                <div id="photo-fields" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Návod k fotografii</label>
+                        <textarea id="photo-hint" class="input" placeholder="Např. Zhyndejte předmět v barvě modrá a fotte ho"></textarea>
+                    </div>
+                </div>
+                <div id="team-fields" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Popis týmové výzvy</label>
+                        <textarea id="team-description" class="input" placeholder="Popište co tým musí udělat"></textarea>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pořadí stanoviště</label>
+                    <input type="number" id="station-order" class="input" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Předchozí stanoviště (pokud je vyžadováno)</label>
+                    <select id="station-requires" class="input">
+                        <option value="">Žádné (volitelné)</option>
+                    </select>
+                    <p class="form-hint">Nechte prázdné pokud není požadováno</p>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="showScreen('teacher-dashboard')">Zrušit</button>
+                    <button class="btn btn-success" onclick="saveStation()">💾 Uložit stanoviště</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- TEACHER RESULTS -->
+    <div id="screen-teacher-results" class="screen">
+        <div class="header">
+            <button class="header-back" onclick="showScreen('teacher-dashboard')">←</button>
+            <span class="header-title">Výsledky hry</span>
+            <div style="width: 40px;"></div>
+        </div>
+        <div class="content">
+            <div id="teacher-results-content"></div>
+        </div>
+    </div>
+
+    <!-- INTRO -->
+    <div id="screen-intro" class="screen">
+        <div class="content" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 100vh;">
+            <div style="font-size: 80px; margin-bottom: 20px; animation: pulse 2s infinite;">🏭</div>
+            <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px;">Vítkovice Quest</h1>
+            <p style="font-size: 16px; color: var(--text-secondary); margin-bottom: 30px; max-width: 300px;">Dobrodružství začíná!</p>
+            <div class="card" style="max-width: 340px; width: 100%; text-align: left; margin-bottom: 30px;">
+                <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">📋 Pravidla</h3>
+                <ul style="font-size: 14px; color: var(--text-secondary); line-height: 1.8; padding-left: 20px;">
+                    <li>Dokonči co nejvíce stanovišť</li>
+                    <li>Získej co nejvíce bodů</li>
+                    <li>Pracujte společně v týmu</li>
+                    <li>Hrajte fér a užijte si zábavu</li>
+                </ul>
+            </div>
+            <button class="btn btn-primary" onclick="startGame()" style="max-width: 340px; width: 100%; font-size: 18px;">▶️ Spustit hru</button>
+        </div>
+    </div>
+
+    <!-- MAP -->
+    <div id="screen-map" class="screen">
+        <div class="header">
+            <button class="header-back" onclick="showStationList()">←</button>
+            <span class="header-title">Mapa</span>
+            <button class="btn btn-sm btn-primary" onclick="showLeaderboard()">🏆</button>
+        </div>
+        <div class="content" style="padding: 0; flex: 1; display: flex;">
+            <div id="map-container" style="flex: 1;"></div>
+        </div>
+        <div class="bottom-nav">
+            <button class="nav-item active" onclick="showStationList()">
+                <span class="nav-icon">📍</span>
+                <span>Stanoviště</span>
+            </button>
+            <button class="nav-item" onclick="showMap()">
+                <span class="nav-icon">🗺️</span>
+                <span>Mapa</span>
+            </button>
+            <button class="nav-item" onclick="showResults()">
+                <span class="nav-icon">🏆</span>
+                <span>Výsledky</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- STATION LIST -->
+    <div id="screen-station-list" class="screen">
+        <div class="header">
+            <span class="header-title">Stanoviště</span>
+            <button class="btn btn-sm btn-primary" onclick="showLeaderboard()">🏆</button>
+        </div>
+        <div class="content">
+            <div id="stations-container"></div>
+        </div>
+        <div class="bottom-nav">
+            <button class="nav-item active" onclick="showStationList()">
+                <span class="nav-icon">📍</span>
+                <span>Stanoviště</span>
+            </button>
+            <button class="nav-item" onclick="showMap()">
+                <span class="nav-icon">🗺️</span>
+                <span>Mapa</span>
+            </button>
+            <button class="nav-item" onclick="showResults()">
+                <span class="nav-icon">🏆</span>
+                <span>Výsledky</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- STATION TASK -->
+    <div id="screen-station-task" class="screen">
+        <div class="header">
+            <button class="header-back" onclick="goBackFromTask()">←</button>
+            <span class="header-title" id="task-title">Stanoviště</span>
+            <div style="width: 40px;"></div>
+        </div>
+        <div class="content" id="task-content"></div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="screen-results" class="screen">
+        <div class="header">
+            <span class="header-title">Výsledky</span>
+            <button class="btn btn-sm btn-primary" onclick="showStationList()">🏆</button>
+        </div>
+        <div class="content" id="results-content"></div>
+        <div class="bottom-nav">
+            <button class="nav-item" onclick="showStationList()">
+                <span class="nav-icon">📍</span>
+                <span>Stanoviště</span>
+            </button>
+            <button class="nav-item" onclick="showMap()">
+                <span class="nav-icon">🗺️</span>
+                <span>Mapa</span>
+            </button>
+            <button class="nav-item active" onclick="showResults()">
+                <span class="nav-icon">🏆</span>
+                <span>Výsledky</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- OVERLAY / MODAL -->
+    <div id="overlay" class="overlay" onclick="closeOverlay()">
+        <div class="modal" id="modal-content" onclick="event.stopPropagation()"></div>
+    </div>
+
+    <!-- SCORE POPUP -->
+    <div id="score-popup" class="score-popup hidden">
+        <div id="score-popup-emoji" style="font-size: 64px; margin-bottom: 10px;">🎉</div>
+        <h2 id="score-popup-points">+100</h2>
+        <p id="score-popup-text">Úkol splněn!</p>
+        <button class="btn btn-primary mt-4" onclick="closeScorePopup()">Pokračovat</button>
+    </div>
+
+    <!-- QR CODE MODAL -->
+    <div id="qr-modal" class="overlay" onclick="closeQrModal()">
+        <div class="modal" style="text-align: center; max-width: 360px;" onclick="event.stopPropagation()">
+            <div class="modal-title">QR kód hry</div>
+            <div id="qr-modal-canvas" style="display: flex; justify-content: center; padding: 20px 0;"></div>
+            <p id="qr-modal-text" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;"></p>
+            <button class="btn btn-secondary" onclick="closeQrModal()">Zavřít</button>
+        </div>
+    </div>
+
+    <script>
+    // ================= DATA & STATE =================
+    const TEAMS_KEY = 'vq_teams';
+    const GAMES_KEY = 'vq_games';
+    const CURRENT_TEAM_KEY = 'vq_current_team';
+    const CURRENT_GAME_KEY = 'vq_current_game';
+    const ALL_RESULTS_KEY = 'vq_all_results';
+    const TEACHER_PASSWORD = 'vko';
+
+    let currentTeam = null;
+    let currentGame = null;
+    let allTeams = [];
+    let allGames = [];
+    let map = null;
+    let markers = [];
+    let watchId = null;
+    let lastScreen = 'station-list';
+    let currentStationId = null;
+    let html5QrCode = null;
+    let currentPhotoData = null;
+    let currentCameraStream = null;
+    let photoTimerInterval = null;
+    let photoTimeLeft = 0;
+    let currentPosition = null;
+    let gpsStartPosition = null;
+    let currentGameId = null;
+    let editingStationId = null;
+    let qrJoinScanner = null;
+
+    // ================= INITIALIZATION =================
+    function init() {
+        try {
+            const storage = window.localStorage || window.sessionStorage || null;
+            allTeams = storage ? JSON.parse(storage.getItem(TEAMS_KEY) || '[]') : [];
+            allGames = storage ? JSON.parse(storage.getItem(GAMES_KEY) || '[]') : [];
+            const savedTeam = storage ? storage.getItem(CURRENT_TEAM_KEY) : null;
+            const savedGame = storage ? storage.getItem(CURRENT_GAME_KEY) : null;
+            if (savedTeam && savedGame) {
+                currentTeam = JSON.parse(savedTeam);
+                currentGame = JSON.parse(savedGame);
+            }
+            if (allGames.length === 0) {
+                createDemoGame();
+            }
+            const hash = window.location.hash.replace(/^#/, '');
+            const params = new URLSearchParams(window.location.search);
+            const gameParam = params.get('game') || params.get('room');
+            const teacherParam = params.get('teacher') || params.get('mode');
+            const hashMatch = hash.match(/^\/(hra|play)\/([^\/]+)/);
+            const roomId = hashMatch ? hashMatch[2] : gameParam;
+            
+            if (teacherParam === 'teacher' || teacherParam === 'admin') {
+                showScreen('teacher-login');
+                return;
+            }
+            
+            if (roomId) {
+                const game = allGames.find(g => g.code.toLowerCase() === roomId.toLowerCase());
+                if (game) {
+                    currentGame = game;
+                    const studentCode = document.getElementById('student-join-code');
+                    const studentTeam = document.getElementById('student-join-team');
+                    if (studentCode && studentTeam) {
+                        studentCode.value = game.code;
+                        studentTeam.value = '';
+                        showScreen('student-join');
+                        document.body.classList.add('student-mode');
+                    } else if (!currentTeam) {
+                        showScreen('student-join');
+                    }
+                } else if (!currentTeam) {
+                    showScreen('teacher-login');
+                }
+            } else {
+                showScreen('teacher-login');
+            }
+        } catch (e) {
+            console.error('Init error:', e);
+        }
+    }
+
+    function createDemoGame() {
+        const demoGame = {
+            id: 'demo',
+            name: 'Demo: Vítkovice Quest',
+            code: 'demo',
+            stations: [
+                {
+                    id: 's_truth', name: 'Pravda nebo lež o naší škole', description: 'Zjisti, která z následujících tvrzení o škole je NEPRAVDIVÁ.', type: 'quiz',
+                    points: 100, order: 1, requires: '', completed: false,
+                    quizQuestion: 'Která z těchto tvrzení o škole je NEPRAVDIVÁ?',
+                    quizOptions: ['A) Složení vyučujících v kabinetu češtinářů tvoří Pavel, Pavla a Pavlína.', 'B) Pokud student při zkoušení špatně obváže ruku spolužákovi, podle tradice v tom obvazu musí „zraněný“ chodit celý zbytek vyučování.', 'C) Budova školy ve Vítkovicích původně sloužila jako zámecký pivovar.', 'D) Pokud studenta potká dozor na chodbě bez přezůvek, má právo mu na místě zabavit jednu botu a vrátit až na konci školního roku.'],
+                    quizCorrect: 'D) Pokud studenta potká dozor na chodbě bez přezůvek, má právo mu na místě zabavit jednu botu a vrátit až na konci školního roku.'
+                },
+                {
+                    id: 's1', name: 'Stanoviště 2 – Šorštýn (781 m)', description: 'Šorštýn je hora (výškový bod 781 m n. m.) v Moravskoslezských Beskydech. Podívejte se na statickou mapu a identifikujte, kde se nacházíte.', type: 'info',
+                    points: 100, order: 2, requires: 's_truth', completed: false, lat: 49.5247, lng: 18.4592
+                },
+                {
+                    id: 's2', name: 'Selfie nejstaršího', description: 'Nejstarší člen týmu pošle selfie s rekonstruovaným objektem.', type: 'photo',
+                    points: 100, order: 3, requires: 's1', photoHint: 'Nejstarší člen týmu musí být na fotce spolu s rekonstruovaným průmyslovým objektem.', completed: false
+                },
+                {
+                    id: 's3', name: 'Původ názvu Šorštýn', description: 'Kopec Šorštýn má velmi neobvyklé jméno. Ze kterého jazyka pochází?', type: 'quiz',
+                    points: 100, order: 4, requires: 's2', quizQuestion: 'Kopec Šorštýn (781 m n. m.), kolem kterého právě procházíte, má velmi neobvyklé jméno. Ze kterého jazyka pochází?',
+                    quizOptions: ['Z němčiny', 'Z polštiny', 'Ze staroslověnštiny', 'Z maďarštiny'], quizCorrect: 'Z němčiny', completed: false
+                },
+                {
+                    id: 's4', name: 'Lovci divoké zvěře', description: 'Dokážete v lese najít živočicha? Nemusí to být zrovna medvěd, Najděte a vyfoťte mravence, brouka, slimáka, ještěrku nebo klidně ptáčka.', type: 'photo',
+                    points: 150, order: 5, requires: 's3', photoHint: 'Vyfoťte malého živočicha v lese (mravenec, brouk, slimák, ještěrka, pták).', completed: false
+                },
+                {
+                    id: 's5', name: 'Týmová fotka', description: 'Vytvořte kreativní fotografii celého týmu u průmyslového objektu.', type: 'photo',
+                    points: 150, order: 6, requires: 's4', photoHint: 'Fotka musí obsahovat všechny členy týmu a alespoň jeden průmyslový detail.', completed: false
+                },
+                {
+                    id: 's6', name: 'Logická hádanka', description: 'Vyřešte hádanku související s historií Vítkovic.', type: 'logic',
+                    points: 100, order: 7, requires: 's5',
+                    logicQuestion: 'Mám města, ale žádné domy. Mám hory, ale žádné stromy. Mám vodu, ale žádné ryby. Co jsem?',
+                    logicCorrect: 'mapa', logicHint: 'Pomyslete na cestovní pomůcku.', completed: false
+                },
+                {
+                    id: 's7', name: 'Týmová hra', description: 'Poměrně těžký úkol pro celý tým.', type: 'team-challenge',
+                    points: 200, order: 8, requires: 's6', teamDescription: 'Seřaďte celý tým podle data narození bez mluvení. Poté udělejte společnou fotku.', completed: false
+                },
+                {
+                    id: 's8', name: 'Bonusový úkol', description: 'Najděte skrytý objekt podle nápovědy.', type: 'text',
+                    points: 300, order: 9, requires: 's7',
+                    textQuestion: 'Jaká je nejstarší část areálu Vítkovic? (jedno slovo)',
+                    textCorrect: 'Vítkovice', completed: false
+                }
+            ]
+        };
+        allGames.push(demoGame);
+        saveGames();
+    }
+
+    function saveGames() {
+        try { localStorage.setItem(GAMES_KEY, JSON.stringify(allGames)); } catch (e) { console.error('saveGames error:', e); }
+    }
+
+    function saveTeams() {
+        try { localStorage.setItem(TEAMS_KEY, JSON.stringify(allTeams)); } catch (e) { console.error('saveTeams error:', e); }
+    }
+
+    // ================= SCREEN MANAGEMENT =================
+    function showScreen(screenId) {
+        try {
+            console.log('showScreen called with:', screenId);
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById('screen-' + screenId);
+            if (!target) { console.error('Screen not found:', 'screen-' + screenId); return; }
+            target.classList.add('active');
+        } catch (e) {
+            console.error('showScreen error:', e);
+        }
+        if (screenId === 'map') {
+            setTimeout(initMap, 100);
+        }
+        if (screenId === 'station-list') {
+            renderStations();
+        }
+        if (screenId === 'teacher-dashboard') {
+            renderGames();
+        }
+        if (screenId === 'station-builder') {
+            updateStationForm();
+            populateRequiresSelect();
+        }
+        if (screenId !== 'station-task') {
+            stopCamera();
+        }
+    }
+
+    function showStationList() {
+        lastScreen = 'station-list';
+        showScreen('station-list');
+    }
+
+    function showMap() {
+        lastScreen = 'map';
+        showScreen('map');
+    }
+
+    function showResults() {
+        lastScreen = 'results';
+        renderResults();
+        showScreen('results');
+    }
+
+    function showLeaderboard() {
+        renderLeaderboardModal();
+    }
+    // ================= GAME FLOW =================
+    function completeStudentJoin() {
+        const roomNumber = document.getElementById('student-join-team').value.trim();
+        const gameCode = document.getElementById('student-join-code').value.trim();
+        if (!roomNumber) { showToast('Zadejte číslo pokoje'); return; }
+        if (!gameCode) { showToast('Kód hry chybí'); return; }
+        const game = allGames.find(g => g.code.toLowerCase() === gameCode.toLowerCase());
+        if (!game) { showToast('Hra nenalezena'); return; }
+        currentGame = game;
+        let team = allTeams.find(t => t.name === roomNumber && t.gameId === game.id);
+        if (!team) {
+            team = {
+                id: 'team_' + Date.now(),
+                name: roomNumber,
+                gameId: game.id,
+                score: 0,
+                completedStations: [],
+                currentStationId: game.stations.length > 0 ? game.stations[0].id : null,
+                startTime: Date.now(),
+                photos: []
+            };
+            allTeams.push(team);
+            saveTeams();
+        }
+        currentTeam = team;
+        localStorage.setItem(CURRENT_TEAM_KEY, JSON.stringify(currentTeam));
+        localStorage.setItem(CURRENT_GAME_KEY, JSON.stringify(currentGame));
+        showScreen('intro');
+    }
+
+    function startGame() {
+        showStationList();
+    }
+
+    // ================= STATION LOGIC =================
+    function isStationAvailable(station) {
+        if (!station.requires) return true;
+        return currentTeam.completedStations.includes(station.requires);
+    }
+
+    function getStationStatus(station) {
+        if (currentTeam.completedStations.includes(station.id)) return 'completed';
+        if (isStationAvailable(station)) return 'available';
+        return 'locked';
+    }
+
+    function getStationIcon(type) {
+        const icons = { info: 'ℹ️', gps: '📍', qr: '📱', quiz: '❓', photo: '📸', 'team-challenge': '👥', logic: '🧠', text: '📝', number: '🔢' };
+        return icons[type] || '📍';
+    }
+
+    function renderStations() {
+        const container = document.getElementById('stations-container');
+        if (!currentGame || !currentGame.stations) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><h3>Žádné stanoviště</h3></div>';
+            return;
+        }
+        const sorted = [...currentGame.stations].sort((a, b) => a.order - b.order);
+        container.innerHTML = sorted.map(s => {
+            const status = getStationStatus(s);
+            const statusIcon = status === 'completed' ? '✅' : status === 'available' ? '▶️' : '🔒';
+            return `
+                <div class="station-card" onclick="openStation('${s.id}')">
+                    <div class="station-icon ${s.type}">${getStationIcon(s.type)}</div>
+                    <div class="station-info">
+                        <div class="station-name">${s.name}</div>
+                        <div class="station-meta">${s.points} bodů · ${getTypeLabel(s.type)}</div>
+                    </div>
+                    <div class="station-status ${status}">${statusIcon}</div>
+                </div>
+            `;
+        }).join('');
+        updateProgress();
+    }
+
+    function getTypeLabel(type) {
+        const labels = { info: 'Informace', gps: 'GPS', qr: 'QR kód', quiz: 'Kvíz', photo: 'Fotka', 'team-challenge': 'Týmová výzva', logic: 'Logika', text: 'Text', number: 'Číslo' };
+        return labels[type] || type;
+    }
+
+    function openStation(stationId) {
+        const station = currentGame.stations.find(s => s.id === stationId);
+        if (!station) return;
+        const status = getStationStatus(station);
+        if (status === 'locked') { showToast('Toto stanoviště je zamčené. Nejprve dokonči předchozí úkoly.'); return; }
+        if (status === 'completed') { showToast('Toto stanoviště jste již splnili.'); return; }
+        currentStationId = stationId;
+        lastScreen = 'station-list';
+        showScreen('station-task');
+        renderTask(station);
+    }
+
+    function renderTask(station) {
+        document.getElementById('task-title').textContent = station.name;
+        const content = document.getElementById('task-content');
+        let html = `
+            <div class="card mb-4">
+                <p style="font-size: 16px; line-height: 1.6;">${station.description}</p>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <span class="badge badge-primary">${getTypeLabel(station.type)}</span>
+                    <span class="badge badge-success">${station.points} bodů</span>
+                </div>
+            </div>
+        `;
+        switch (station.type) {
+            case 'gps': html += renderGpsTask(station); break;
+            case 'qr': html += renderQrTask(station); break;
+            case 'quiz': html += renderQuizTask(station); break;
+            case 'photo': html += renderPhotoTask(station); break;
+            case 'team-challenge': html += renderTeamTask(station); break;
+            case 'logic': html += renderLogicTask(station); break;
+            case 'text': html += renderTextTask(station); break;
+            case 'number': html += renderNumberTask(station); break;
+            case 'info': html += renderInfoTask(station); break;
+        }
+        content.innerHTML = html;
+        if (station.type === 'gps') startGpsWatch(station);
+        if (station.type === 'qr') startQrScanner(station);
+        if (station.type === 'photo' || station.type === 'team-challenge') startCamera();
+        if (station.type === 'photo') startPhotoTimer();
+        if (station.type === 'info' && station.lat && station.lng) {
+            setTimeout(() => initStationMap(station.lat, station.lng), 100);
+        }
+    }
+
+    function goBackFromTask() {
+        if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+        if (html5QrCode) { try { html5QrCode.stop(); } catch(e){} html5QrCode = null; }
+        if (qrJoinScanner) { try { qrJoinScanner.stop(); } catch(e){} qrJoinScanner = null; }
+        stopPhotoTimer();
+        gpsStartPosition = null;
+        if (lastScreen === 'map') showMap();
+        else showStationList();
+    }
+
+    // ================= GPS TASK =================
+    function renderGpsTask(station) {
+        const isDistanceTask = station.distanceTarget && station.distanceTarget > 0;
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">📍 ${isDistanceTask ? 'Výzva: Ujdi ' + station.distanceTarget + ' m' : 'GPS kontrola'}</h3>
+                <div id="gps-info">
+                    <p style="color: var(--text-secondary);">Čekám na polohu...</p>
+                </div>
+                ${isDistanceTask ? '' : '<button class="btn btn-primary mt-4" onclick="checkGpsLocation(' + station.lat + ', ' + station.lng + ', ' + station.radius + ')">Zkontrolovat polohu</button>'}
+            </div>
+        `;
+    }
+
+    function startGpsWatch(station) {
+        if (!navigator.geolocation) { showToast('GPS není podporováno'); return; }
+        const isDistanceTask = station.distanceTarget && station.distanceTarget > 0;
+        if (isDistanceTask) {
+            gpsStartPosition = null;
+        }
+        watchId = navigator.geolocation.watchPosition(
+            pos => {
+                currentPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                if (isDistanceTask && !gpsStartPosition) {
+                    gpsStartPosition = { lat: currentPosition.lat, lng: currentPosition.lng };
+                }
+                updateGpsInfo(station);
+            },
+            err => { showToast('Nelze získat polohu: ' + err.message); },
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+    }
+
+    function updateGpsInfo(station) {
+        if (!currentPosition) return;
+        const isDistanceTask = station.distanceTarget && station.distanceTarget > 0;
+        const info = document.getElementById('gps-info');
+        if (!info) return;
+
+        let dist = 0;
+        let inRange = false;
+        let label = '';
+
+        if (isDistanceTask && gpsStartPosition) {
+            dist = getDistance(currentPosition.lat, currentPosition.lng, gpsStartPosition.lat, gpsStartPosition.lng);
+            inRange = dist >= station.distanceTarget;
+            label = inRange ? '🎉 Úkol splněn!' : 'Ušlá vzdálenost';
+            if (inRange) {
+                completeStation();
+            }
+        } else {
+            dist = getDistance(currentPosition.lat, currentPosition.lng, station.lat, station.lng);
+            inRange = dist <= station.radius;
+            label = inRange ? 'Jste v cíli!' : 'Vzdálenost od cíle';
+        }
+
+        info.innerHTML = `
+            <div class="text-center" style="padding: 20px;">
+                <div style="font-size: 48px; margin-bottom: 12px;">${inRange ? '🎯' : '🧭'}</div>
+                <div style="font-size: 24px; font-weight: 700; color: ${inRange ? 'var(--accent)' : 'var(--primary)'};">${Math.round(dist)} m</div>
+                <p style="color: var(--text-secondary); margin-top: 8px;">${label}</p>
+                ${isDistanceTask ? '<div class="progress-bar mt-2"><div class="progress-fill" style="width: ' + Math.max(0, Math.min(100, (dist / station.distanceTarget) * 100)) + '%"></div></div>' : '<div class="progress-bar mt-2"><div class="progress-fill" style="width: ' + Math.max(0, Math.min(100, 100 - (dist / (station.radius * 3)) * 100)) + '%"></div></div>'}
+            </div>
+        `;
+    }
+
+    function checkGpsLocation(targetLat, targetLng, radius) {
+        if (!currentPosition) { showToast('Poloha není dostupná'); return; }
+        const dist = getDistance(currentPosition.lat, currentPosition.lng, targetLat, targetLng);
+        if (dist <= radius) { completeStation(); }
+        else { showToast(`Jste ${Math.round(dist)} m od cíle. Potřebujete být do ${radius} m.`); }
+    }
+
+    function getDistance(lat1, lng1, lat2, lng2) {
+        const R = 6371e3;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng/2) * Math.sin(dLng/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+    // ================= QR TASK =================
+    function renderQrTask(station) {
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">📱 QR kód</h3>
+                <p style="margin-bottom: 16px; color: var(--text-secondary);">Naskenujte QR kód v okolí pro ověření.</p>
+                <div id="qr-reader" class="qr-reader"></div>
+                <div id="qr-result" class="mt-2"></div>
+            </div>
+        `;
+    }
+
+    function startQrScanner(station) {
+        if (typeof Html5Qrcode === 'undefined') { showToast('QR scanner není dostupný'); return; }
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode('qr-reader');
+        }
+        html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            decodedText => {
+                const result = document.getElementById('qr-result');
+                if (decodedText.trim().toLowerCase() === station.qrText.toLowerCase()) {
+                    result.innerHTML = `<div class="badge badge-success mt-2">✅ QR kód správně!</div>`;
+                    completeStation();
+                } else {
+                    result.innerHTML = `<div class="badge badge-warning mt-2">❌ Nesprávný kód</div>`;
+                }
+            },
+            () => {}
+        ).catch(err => { showToast('Nelze spustit scanner: ' + err); });
+    }
+
+    // ================= QUIZ TASK =================
+    function renderQuizTask(station) {
+        const options = (station.quizOptions || []).map((opt, i) =>
+            `<div class="option-chip" onclick="selectQuizOption(this, '${opt.replace(/'/g, "\\'")}')">${opt}</div>`
+        ).join('');
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">❓ Kvíz</h3>
+                <p style="font-size: 16px; margin-bottom: 20px;">${station.quizQuestion}</p>
+                <div id="quiz-options">${options}</div>
+                <button class="btn btn-primary mt-4 hidden" id="quiz-submit" onclick="submitQuiz('${station.quizCorrect.replace(/'/g, "\\'")}')">Odeslat odpověď</button>
+            </div>
+        `;
+    }
+
+    let selectedQuizAnswer = null;
+    function selectQuizOption(el, answer) {
+        document.querySelectorAll('#quiz-options .option-chip').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedQuizAnswer = answer;
+        document.getElementById('quiz-submit').classList.remove('hidden');
+    }
+
+    function submitQuiz(correct) {
+        if (selectedQuizAnswer === correct) { completeStation(); }
+        else { showToast('Nesprávná odpověď. Zkuste znovu.'); selectedQuizAnswer = null; document.querySelectorAll('#quiz-options .option-chip').forEach(c => c.classList.remove('selected')); document.getElementById('quiz-submit').classList.add('hidden'); }
+    }
+
+    // ================= PHOTO TASK =================
+    function renderPhotoTask(station) {
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">📸 Fotografický úkol</h3>
+                <p style="margin-bottom: 16px; color: var(--text-secondary);">${station.photoHint || 'Pořiďte fotografii'}</p>
+                <div id="photo-timer" style="font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 12px; color: var(--danger);">⏱️ 1:00</div>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn btn-primary" onclick="startCameraAndTakePhoto()">📸 Pořídit fotku</button>
+                </div>
+                <img id="photo-preview" class="photo-preview hidden" alt="Náhled">
+                <button class="btn btn-success mt-4 hidden" id="photo-submit" onclick="submitPhoto()">✅ Odeslat fotografii</button>
+            </div>
+        `;
+    }
+
+    function startPhotoTimer() {
+        stopPhotoTimer();
+        photoTimeLeft = 60;
+        const timerEl = document.getElementById('photo-timer');
+        if (timerEl) {
+            timerEl.classList.remove('hidden');
+            timerEl.textContent = '⏱️ 1:00';
+        }
+        photoTimerInterval = setInterval(function() {
+            photoTimeLeft--;
+            if (timerEl) {
+                const mins = Math.floor(photoTimeLeft / 60);
+                const secs = photoTimeLeft % 60;
+                timerEl.textContent = '⏱️ ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+            }
+            if (photoTimeLeft <= 0) {
+                stopPhotoTimer();
+                showToast('Čas vypršel! Úkol nebyl dokončen.');
+                goBackFromTask();
+            }
+        }, 1000);
+    }
+
+    function stopPhotoTimer() {
+        if (photoTimerInterval) {
+            clearInterval(photoTimerInterval);
+            photoTimerInterval = null;
+        }
+    }
+
+    function takePhoto() {
+        const canvas = document.createElement('canvas');
+        const preview = document.getElementById('photo-preview');
+        const submitBtn = document.getElementById('photo-submit');
+        const videoEl = document.getElementById('camera-video');
+        if (videoEl && videoEl.srcObject) {
+            canvas.width = videoEl.videoWidth || 640;
+            canvas.height = videoEl.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoEl, 0, 0);
+            currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+        } else if (currentPhotoData) {
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, 640, 480);
+                currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+                preview.src = currentPhotoData;
+                preview.classList.remove('hidden');
+                submitBtn.classList.remove('hidden');
+            };
+            img.src = currentPhotoData;
+            return;
+        } else {
+            showToast('Nejprve pořiďte fotografii'); return;
+        }
+        preview.src = currentPhotoData;
+        preview.classList.remove('hidden');
+        submitBtn.classList.remove('hidden');
+        stopCamera();
+    }
+
+    function submitPhoto() {
+        if (!currentPhotoData) { showToast('Nejprve pořiďte fotografii'); return; }
+        currentTeam.photos = currentTeam.photos || [];
+        currentTeam.photos.push({ stationId: currentStationId, data: currentPhotoData, timestamp: Date.now() });
+        saveTeams();
+        stopPhotoTimer();
+        completeStation();
+    }
+
+    // ================= TEAM CHALLENGE =================
+    function renderTeamTask(station) {
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">👥 Týmová výzva</h3>
+                <p style="font-size: 16px; margin-bottom: 20px;">${station.teamDescription}</p>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn btn-primary" onclick="startCameraAndTakeTeamPhoto()">📸 Pořídit fotku</button>
+                </div>
+                <img id="team-photo-preview" class="photo-preview hidden" alt="Náhled">
+                <button class="btn btn-success mt-4 hidden" id="team-photo-submit" onclick="completeStation()">✅ Hotovo</button>
+            </div>
+        `;
+    }
+
+    function takeTeamPhoto() {
+        const canvas = document.createElement('canvas');
+        const preview = document.getElementById('team-photo-preview');
+        const submitBtn = document.getElementById('team-photo-submit');
+        const videoEl = document.getElementById('team-video');
+        if (videoEl && videoEl.srcObject) {
+            canvas.width = videoEl.videoWidth || 640;
+            canvas.height = videoEl.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoEl, 0, 0);
+            currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+        } else if (currentPhotoData) {
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, 640, 480);
+                currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+                preview.src = currentPhotoData;
+                preview.classList.remove('hidden');
+                submitBtn.classList.remove('hidden');
+            };
+            img.src = currentPhotoData;
+            return;
+        } else {
+            showToast('Nejprve pořiďte fotografii'); return;
+        }
+        preview.src = currentPhotoData;
+        preview.classList.remove('hidden');
+        submitBtn.classList.remove('hidden');
+        stopCamera();
+    }
+
+    function startCamera() {
+        stopCamera();
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast('Kamera není podporována na tomto zařízení');
+            return;
+        }
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                currentCameraStream = stream;
+                const videoEl = document.getElementById('camera-video') || document.getElementById('team-video');
+                if (videoEl) {
+                    videoEl.srcObject = stream;
+                    videoEl.play();
+                }
+            })
+            .catch(err => showToast('Nelze spustit kameru: ' + err.message));
+    }
+
+    function stopCamera() {
+        if (currentCameraStream) {
+            currentCameraStream.getTracks().forEach(t => t.stop());
+            currentCameraStream = null;
+        }
+        const videoEls = document.querySelectorAll('#camera-video, #team-video');
+        videoEls.forEach(v => { v.srcObject = null; });
+    }
+
+    function startCameraAndTakePhoto() {
+        const preview = document.getElementById('photo-preview');
+        const submitBtn = document.getElementById('photo-submit');
+        const videoEl = document.getElementById('camera-video');
+        if (!videoEl) {
+            showToast('Kamera není k dispozici');
+            return;
+        }
+        startCamera();
+        videoEl.onloadedmetadata = function() {
+            videoEl.play();
+            const canvas = document.createElement('canvas');
+            canvas.width = videoEl.videoWidth || 640;
+            canvas.height = videoEl.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoEl, 0, 0);
+            currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+            preview.src = currentPhotoData;
+            preview.classList.remove('hidden');
+            submitBtn.classList.remove('hidden');
+            stopCamera();
+        };
+    }
+
+    function startCameraAndTakeTeamPhoto() {
+        const preview = document.getElementById('team-photo-preview');
+        const submitBtn = document.getElementById('team-photo-submit');
+        const videoEl = document.getElementById('team-video');
+        if (!videoEl) {
+            showToast('Kamera není k dispozici');
+            return;
+        }
+        startCamera();
+        videoEl.onloadedmetadata = function() {
+            videoEl.play();
+            const canvas = document.createElement('canvas');
+            canvas.width = videoEl.videoWidth || 640;
+            canvas.height = videoEl.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoEl, 0, 0);
+            currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+            preview.src = currentPhotoData;
+            preview.classList.remove('hidden');
+            submitBtn.classList.remove('hidden');
+            stopCamera();
+        };
+    }
+
+    // ================= LOGIC TASK =================
+    function renderLogicTask(station) {
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">🧠 Logická úloha</h3>
+                <p style="font-size: 16px; margin-bottom: 20px;">${station.logicQuestion}</p>
+                <input type="text" id="logic-answer" class="input" placeholder="Zadejte odpověď" onkeypress="if(event.key==='Enter')submitLogic('${station.logicCorrect.replace(/'/g, "\\'")}','${(station.logicHint || '').replace(/'/g, "\\'")}')">
+                <button class="btn btn-primary mt-4" onclick="submitLogic('${station.logicCorrect.replace(/'/g, "\\'")}','${(station.logicHint || '').replace(/'/g, "\\'")}')">Odeslat</button>
+                <div id="logic-hint" class="mt-2 hidden"></div>
+            </div>
+        `;
+    }
+
+    function submitLogic(correct, hint) {
+        const answer = document.getElementById('logic-answer').value.trim().toLowerCase();
+        if (answer === correct.toLowerCase()) { completeStation(); }
+        else {
+            const hintEl = document.getElementById('logic-hint');
+            hintEl.innerHTML = `<p style="color: var(--warning); font-size: 14px;">💡 Nápověda: ${hint}</p>`;
+            hintEl.classList.remove('hidden');
+            showToast('Nesprávně, zkuste znovu');
+        }
+    }
+
+    // ================= TEXT TASK =================
+    function renderTextTask(station) {
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">📝 Textová odpověď</h3>
+                <p style="font-size: 16px; margin-bottom: 20px;">${station.textQuestion}</p>
+                <input type="text" id="text-answer" class="input" placeholder="Zadejte odpověď" onkeypress="if(event.key==='Enter')submitText('${station.textCorrect.replace(/'/g, "\\'")}')">
+                <button class="btn btn-primary mt-4" onclick="submitText('${station.textCorrect.replace(/'/g, "\\'")}')">Odeslat</button>
+            </div>
+        `;
+    }
+
+    function submitText(correct) {
+        const answer = document.getElementById('text-answer').value.trim().toLowerCase();
+        if (answer === correct.toLowerCase()) { completeStation(); }
+        else { showToast('Nesprávně, zkuste znovu'); }
+    }
+
+    // ================= NUMBER TASK =================
+    function renderNumberTask(station) {
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">🔢 Číselná odpověď</h3>
+                <p style="font-size: 16px; margin-bottom: 20px;">${station.numberQuestion}</p>
+                <input type="number" id="number-answer" class="input" placeholder="Zadejte číslo" onkeypress="if(event.key==='Enter')submitNumber(${station.numberCorrect})">
+                <button class="btn btn-primary mt-4" onclick="submitNumber(${station.numberCorrect})">Odeslat</button>
+            </div>
+        `;
+    }
+
+    function submitNumber(correct) {
+        const answer = parseFloat(document.getElementById('number-answer').value);
+        if (!isNaN(answer) && Math.abs(answer - correct) <= 20) { completeStation(); }
+        else { showToast('Nesprávně, zkuste znovu'); }
+    }
+
+    // ================= INFO TASK =================
+    function renderInfoTask(station) {
+        const hasMap = station.lat && station.lng;
+        return `
+            <div class="card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">ℹ️ Informační stanoviště</h3>
+                <p style="font-size: 16px; margin-bottom: 20px;">${station.description}</p>
+                ${hasMap ? '<div id="station-map-container" style="height: 300px; border-radius: 12px; overflow: hidden; margin-bottom: 16px;"></div>' : ''}
+                <button class="btn btn-success" onclick="completeStation()">✅ Přečteno</button>
+            </div>
+        `;
+    }
+
+    // ================= COMPLETION =================
+    function completeStation() {
+        const station = currentGame.stations.find(s => s.id === currentStationId);
+        if (!station) return;
+        currentTeam.score += station.points;
+        currentTeam.completedStations.push(station.id);
+        const nextStation = currentGame.stations.find(s => s.requires === currentStationId);
+        if (nextStation) currentTeam.currentStationId = nextStation.id;
+        saveTeams();
+        if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+        if (html5QrCode) { try { html5QrCode.stop(); } catch(e){} html5QrCode = null; }
+        showScorePopup(station.points, 'Úkol splněn!');
+        setTimeout(() => { showStationList(); }, 2000);
+    }
+
+    function showScorePopup(points, text) {
+        const popup = document.getElementById('score-popup');
+        document.getElementById('score-popup-points').textContent = '+' + points;
+        document.getElementById('score-popup-text').textContent = text;
+        popup.classList.remove('hidden');
+    }
+
+    function closeScorePopup() {
+        document.getElementById('score-popup').classList.add('hidden');
+    }
+    // ================= MAP =================
+    function initMap() {
+        const mapContainer = document.getElementById('map-container');
+        if (!mapContainer) return;
+        if (map) { setTimeout(() => map.invalidateSize(), 100); return; }
+        map = L.map('map-container').setView([49.8346, 18.1617], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+        addMapMarkers();
+    }
+
+    function addMapMarkers() {
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        if (!currentGame || !currentGame.stations) return;
+        currentGame.stations.forEach(s => {
+            if (s.lat && s.lng) {
+                const status = getStationStatus(s);
+                const color = status === 'completed' ? '#10b981' : status === 'available' ? '#3b82f6' : '#9ca3af';
+                const marker = L.circleMarker([s.lat, s.lng], { radius: 12, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8 }).addTo(map);
+                marker.bindPopup(`<b>${s.name}</b><br>${getTypeLabel(s.type)} · ${s.points} bodů`);
+                markers.push(marker);
+            }
+        });
+        if (currentPosition) {
+            const userMarker = L.circleMarker([currentPosition.lat, currentPosition.lng], { radius: 8, fillColor: '#ef4444', color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8 }).addTo(map);
+            markers.push(userMarker);
+        }
+    }
+
+    function initStationMap(lat, lng) {
+        const container = document.getElementById('station-map-container');
+        if (!container) return;
+        if (container._leaflet_map) return;
+        const map = L.map('station-map-container').setView([lat, lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+        L.marker([lat, lng]).addTo(map).bindPopup('Šorštýn (781 m n. m.)').openPopup();
+        container._leaflet_map = map;
+    }
+
+    // ================= RESULTS =================
+    function renderResults() {
+        const container = document.getElementById('results-content');
+        if (!currentGame) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><h3>Žádné výsledky</h3></div>'; return; }
+        const gameTeams = allTeams.filter(t => t.gameId === currentGame.id).sort((a, b) => b.score - a.score);
+        if (gameTeams.length === 0) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><h3>Žádné výsledky</h3><p>Hra ještě nezačala</p></div>'; return; }
+        const rankClass = i => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+        const rankEmoji = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+        container.innerHTML = `
+            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Žebříček týmů</h2>
+            ${gameTeams.map((t, i) => {
+                const isCurrentTeam = currentTeam && t.id === currentTeam.id;
+                return `
+                    <div class="leaderboard-item" style="${isCurrentTeam ? 'border-color: var(--primary); background: var(--card-bg);' : ''}">
+                        <div class="leaderboard-rank ${rankClass(i)}">${rankEmoji(i)}</div>
+                        <div class="station-info">
+                            <div class="station-name">${t.name} ${isCurrentTeam ? '<span class="badge badge-primary">Ty</span>' : ''}</div>
+                            <div class="station-meta">${t.completedStations.length} stanovišť · ${formatTime(Date.now() - t.startTime)}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 20px; font-weight: 700; color: var(--accent);">${t.score}</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">bodů</div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        `;
+    }
+
+    function renderLeaderboardModal() {
+        if (!currentGame) { showToast('Nejprve se připojte ke hře'); return; }
+        const gameTeams = allTeams.filter(t => t.gameId === currentGame.id).sort((a, b) => b.score - a.score);
+        const modal = document.getElementById('modal-content');
+        modal.innerHTML = `
+            <div class="modal-title">🏆 Žebříček</div>
+            ${gameTeams.length === 0 ? '<p class="text-center" style="color: var(--text-secondary);">Žádné výsledky</p>' : gameTeams.map((t, i) => `
+                <div class="leaderboard-item">
+                    <div class="leaderboard-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1)}</div>
+                    <div class="station-info">
+                        <div class="station-name">${t.name}</div>
+                        <div class="station-meta">${t.completedStations.length} stanovišť</div>
+                    </div>
+                    <div style="font-weight: 700; color: var(--accent);">${t.score} bodů</div>
+                </div>
+            `).join('')}
+            <button class="btn btn-secondary mt-4" onclick="closeOverlay()">Zavřít</button>
+        `;
+        document.getElementById('overlay').classList.add('active');
+    }
+
+    function formatTime(ms) {
+        const mins = Math.floor(ms / 60000);
+        const secs = Math.floor((ms % 60000) / 1000);
+        return mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
+
+    function updateProgress() {
+        if (!currentGame || !currentTeam) return;
+        const total = currentGame.stations.length;
+        const done = currentTeam.completedStations.length;
+        const pct = total > 0 ? (done / total) * 100 : 0;
+    }
+
+    function closeOverlay() {
+        document.getElementById('overlay').classList.remove('active');
+    }
+
+    
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    // ================= TEACHER FUNCTIONS =================
+    function teacherLogin() {
+        showScreen('teacher-dashboard');
+        renderGames();
+    }
+
+    function teacherLogout() {
+        document.body.classList.remove('student-mode');
+        showScreen('teacher-login');
+    }
+
+    function renderGames() {
+        const container = document.getElementById('games-list');
+        const noGames = document.getElementById('no-games');
+        if (allGames.length === 0) { container.innerHTML = ''; noGames.classList.remove('hidden'); return; }
+        noGames.classList.add('hidden');
+        container.innerHTML = allGames.map(g => `
+            <div class="card mb-2" style="cursor: pointer;" onclick="openGameResults('${g.id}')">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; font-size: 16px;">${g.name}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">${g.stations.length} stanovišť · Kód: ${g.code}</div>
+                    </div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(getStudentUrl(g.code))}" width="80" height="80" style="border-radius: 8px; border: 1px solid var(--border); cursor: pointer;" onclick="event.stopPropagation(); showGameQr('${g.id}', '${g.name}', '${g.code}')">
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); openStationBuilder('${g.id}')">+ Stanoviště</button>
+                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); showGameQr('${g.id}', '${g.name}', '${g.code}')">QR kód</button>
+                </div>
+            </div>
+        `).join('');
+        setTimeout(generateAllGameQrCodes, 500);
+    }
+
+    function generateAllGameQrCodes() {
+        allGames.forEach(g => {
+            const canvas = document.getElementById('qr-canvas-' + g.id);
+            if (!canvas) return;
+            const url = getStudentUrl(g.code);
+            canvas.parentElement.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=' + encodeURIComponent(url) + '" width="80" height="80" style="border-radius: 8px; border: 1px solid var(--border); cursor: pointer;" onclick="event.stopPropagation(); showGameQr(\'' + g.id + '\', \'' + g.name.replace(/'/g, "\\'") + '\', \'' + g.code + '\')">';
+        });
+    }
+
+    function getStudentUrl(gameCode) {
+        const base = window.location.href.split('#')[0].replace(/\/[^\/]*$/, '').replace(/\/$/, '');
+        return base + '/index.html#/hra/' + encodeURIComponent(gameCode);
+    }
+
+    function showGameQr(gameId, gameName, gameCode) {
+        const canvasContainer = document.getElementById('qr-modal-canvas');
+        const modalText = document.getElementById('qr-modal-text');
+        const url = getStudentUrl(gameCode);
+        canvasContainer.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url) + '" width="200" height="200" style="border-radius: 12px; border: 1px solid var(--border);">';
+        modalText.textContent = gameName + ' (' + gameCode + ')';
+        document.getElementById('qr-modal').classList.add('active');
+    }
+
+    function closeQrModal() {
+        document.getElementById('qr-modal').classList.remove('active');
+    }
+
+    function createNewGame() {
+        const name = prompt('Název hry:');
+        if (!name) return;
+        const code = prompt('Kód hry (pro studenty):');
+        if (!code) return;
+        const game = { id: 'game_' + Date.now(), name, code: code.toLowerCase(), stations: [] };
+        allGames.push(game);
+        saveGames();
+        renderGames();
+        showToast('Hra vytvořena');
+    }
+
+    function openGameResults(gameId) {
+        currentGameId = gameId;
+        const game = allGames.find(g => g.id === gameId);
+        if (!game) return;
+        const container = document.getElementById('teacher-results-content');
+        const gameTeams = allTeams.filter(t => t.gameId === gameId).sort((a, b) => b.score - a.score);
+        container.innerHTML = `
+            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">${game.name}</h2>
+            ${gameTeams.length === 0 ? '<p class="text-center" style="color: var(--text-secondary);">Žádné výsledky</p>' : gameTeams.map((t, i) => `
+                <div class="leaderboard-item">
+                    <div class="leaderboard-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}">${i + 1}</div>
+                    <div class="station-info">
+                        <div class="station-name">${t.name}</div>
+                        <div class="station-meta">${t.completedStations.length} stanovišť · ${formatTime(Date.now() - t.startTime)}</div>
+                    </div>
+                    <div style="font-weight: 700; color: var(--accent);">${t.score} bodů</div>
+                </div>
+            `).join('')}
+        `;
+        showScreen('teacher-results');
+    }
+
+    function openStationBuilder(gameId) {
+        currentGameId = gameId;
+        editingStationId = null;
+        document.getElementById('builder-title').textContent = 'Nové stanoviště';
+        clearStationForm();
+        showScreen('station-builder');
+    }
+
+    function clearStationForm() {
+        ['station-name', 'station-description', 'station-points', 'station-lat', 'station-lng', 'station-radius', 'station-qr-text', 'quiz-question', 'quiz-options', 'quiz-correct', 'logic-question', 'logic-correct', 'logic-hint', 'text-question', 'text-correct', 'number-question', 'number-correct', 'photo-hint', 'team-description', 'station-order'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('station-type').value = 'info';
+        document.getElementById('station-points').value = '100';
+        document.getElementById('station-order').value = '1';
+        updateStationForm();
+    }
+
+    function updateStationForm() {
+        const type = document.getElementById('station-type').value;
+        ['gps', 'qr', 'quiz', 'logic', 'text', 'number', 'photo', 'team'].forEach(t => {
+            const el = document.getElementById(t + '-fields');
+            if (el) el.classList.add('hidden');
+        });
+        const fieldMap = { gps: 'gps', qr: 'qr', quiz: 'quiz', logic: 'logic', text: 'text', number: 'number', photo: 'photo', 'team-challenge': 'team' };
+        const fieldId = fieldMap[type];
+        if (fieldId) { const el = document.getElementById(fieldId + '-fields'); if (el) el.classList.remove('hidden'); }
+        if (type === 'quiz') { updateQuizCorrectOptions(); }
+    }
+
+    function updateQuizCorrectOptions() {
+        const optionsTextarea = document.getElementById('quiz-options');
+        const correctSelect = document.getElementById('quiz-correct');
+        if (!optionsTextarea || !correctSelect) return;
+        const options = optionsTextarea.value.split('\n').map(o => o.trim()).filter(o => o);
+        correctSelect.innerHTML = '<option value="">-- Vyberte odpověď --</option>' + options.map(o => `<option value="${o}">${o}</option>`).join('');
+    }
+
+    function populateRequiresSelect() {
+        const game = allGames.find(g => g.id === currentGameId);
+        const select = document.getElementById('station-requires');
+        const orderInput = document.getElementById('station-order');
+        if (!game || !select) return;
+        const currentOrder = orderInput ? parseInt(orderInput.value) || 0 : 0;
+        const filtered = game.stations.filter(s => s.order < currentOrder && s.id !== editingStationId);
+        select.innerHTML = '<option value="">Žádné (volitelné)</option>' + filtered.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    }
+
+    function saveStation() {
+        const name = document.getElementById('station-name').value.trim();
+        const description = document.getElementById('station-description').value.trim();
+        const type = document.getElementById('station-type').value;
+        const points = parseInt(document.getElementById('station-points').value) || 100;
+        const order = parseInt(document.getElementById('station-order').value) || 1;
+        const requires = document.getElementById('station-requires').value;
+        if (!name) { showToast('Zadejte název stanoviště'); return; }
+        const game = allGames.find(g => g.id === currentGameId);
+        if (!game) return;
+        const station = {
+            id: editingStationId || 's_' + Date.now(), name, description, type, points, order, requires, completed: false,
+            lat: type === 'gps' ? parseFloat(document.getElementById('station-lat').value) || 0 : undefined,
+            lng: type === 'gps' ? parseFloat(document.getElementById('station-lng').value) || 0 : undefined,
+            radius: type === 'gps' ? parseInt(document.getElementById('station-radius').value) || 50 : undefined,
+            qrText: type === 'qr' ? document.getElementById('station-qr-text').value : undefined,
+            quizQuestion: type === 'quiz' ? document.getElementById('quiz-question').value : undefined,
+            quizOptions: type === 'quiz' ? document.getElementById('quiz-options').value.split('\n').filter(o => o.trim()) : undefined,
+            quizCorrect: type === 'quiz' ? document.getElementById('quiz-correct').value : undefined,
+            logicQuestion: type === 'logic' ? document.getElementById('logic-question').value : undefined,
+            logicCorrect: type === 'logic' ? document.getElementById('logic-correct').value : undefined,
+            logicHint: type === 'logic' ? document.getElementById('logic-hint').value : undefined,
+            textQuestion: type === 'text' ? document.getElementById('text-question').value : undefined,
+            textCorrect: type === 'text' ? document.getElementById('text-correct').value : undefined,
+            numberQuestion: type === 'number' ? document.getElementById('number-question').value : undefined,
+            numberCorrect: type === 'number' ? parseFloat(document.getElementById('number-correct').value) || 0 : undefined,
+            photoHint: type === 'photo' ? document.getElementById('photo-hint').value : undefined,
+            teamDescription: type === 'team-challenge' ? document.getElementById('team-description').value : undefined
+        };
+        if (editingStationId) {
+            const idx = game.stations.findIndex(s => s.id === editingStationId);
+            if (idx >= 0) { station.completed = game.stations[idx].completed; game.stations[idx] = station; }
+        } else {
+            game.stations.push(station);
+        }
+        saveGames();
+        showToast('Stanoviště uloženo');
+        showScreen('teacher-dashboard');
+        renderGames();
+    }
+
+    // ================= INIT =================
+    try { window.addEventListener('DOMContentLoaded', init); } catch (e) { console.error('DOM listener error:', e); }
+    try { init(); } catch (e) { console.error('Init runtime error:', e); }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
