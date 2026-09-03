@@ -1,0 +1,3438 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Vítkovice Quest 2026 | Školní adaptační kurz – Horní Bečva</title>
+  <meta name="description" content="Interaktivní webová hra pro školní adaptační kurz v Rekreačním zařízení Vítkovice na Horní Bečvě (Beskydy)." />
+  <meta property="og:title" content="Vítkovice Quest 2026 | Školní adaptační kurz – Horní Bečva" />
+  <meta property="og:description" content="Interaktivní webová hra pro školní adaptační kurz v Rekreačním zařízení Vítkovice na Horní Bečvě (Beskydy)." />
+  <meta property="og:type" content="website" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          screens: {
+            'xs': '375px',
+          },
+          colors: {
+            industrial: {
+              950: '#0b111e',
+              900: '#111928',
+              850: '#182235',
+              800: '#1f2d45',
+              700: '#2e4161',
+              600: '#435b85',
+              accent: '#ea580c',
+              accentHover: '#c2410c',
+              rust: '#c2410c',
+              gold: '#f59e0b',
+              steel: '#94a3b8'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+          },
+          keyframes: {
+            shake: {
+              '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+              '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+              '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+              '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- QRCode.js Library with redundant mirrors -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    // Fallback loader if cdnjs fails
+    if (typeof QRCode === 'undefined') {
+      const fallbackScript = document.createElement('script');
+      fallbackScript.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+      document.head.appendChild(fallbackScript);
+    }
+  </script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Modern Firebase Modular SDK loaded directly via Google CDN (Standalone - works with just index.html + firebase-applet-config.json!) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import {
+      getFirestore,
+      collection,
+      doc,
+      setDoc,
+      getDocs,
+      deleteDoc,
+      onSnapshot,
+      getDocFromServer
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    async function startFirebase() {
+      let fbConfig = {
+        projectId: "gen-lang-client-0825517834",
+        appId: "1:954063973084:web:53bd4b1e2b3cdd21cda219",
+        apiKey: "AIzaSyC022ITzKReTI3bUP9C5Y-wjJVa7cNJgQs",
+        authDomain: "gen-lang-client-0825517834.firebaseapp.com",
+        firestoreDatabaseId: "ai-studio-vtkovicequest202-564862be-7a16-4422-b711-c4c2a2387f3f",
+        storageBucket: "gen-lang-client-0825517834.firebasestorage.app",
+        messagingSenderId: "954063973084"
+      };
+
+      try {
+        const resp = await fetch('./firebase-applet-config.json');
+        if (resp.ok) {
+          const fetched = await resp.json();
+          fbConfig = { ...fbConfig, ...fetched };
+        }
+      } catch (e) {
+        // Uses embedded config if fetch fails (e.g. standalone file)
+      }
+
+      const app = initializeApp(fbConfig);
+      const db = getFirestore(app, fbConfig.firestoreDatabaseId);
+
+      window.QuestFirebase = {
+        db,
+        async testConnection() {
+          try {
+            await getDocFromServer(doc(db, 'teams', '_ping_test'));
+            return true;
+          } catch (error) {
+            if (error?.message?.includes('the client is offline')) return false;
+            return true;
+          }
+        },
+        async saveTeamToFirestore(team) {
+          if (!team || !team.id) return;
+          const teamRef = doc(db, 'teams', team.id);
+          await setDoc(teamRef, { ...team, lastUpdated: Date.now() }, { merge: true });
+        },
+        async deleteTeamFromFirestore(teamId) {
+          if (!teamId) return;
+          const teamRef = doc(db, 'teams', teamId);
+          await deleteDoc(teamRef);
+        },
+        async getAllTeamsFromFirestore() {
+          const teamsCol = collection(db, 'teams');
+          const snapshot = await getDocs(teamsCol);
+          const teams = [];
+          snapshot.forEach(docSnap => {
+            if (docSnap.id !== '_ping_test') teams.push(docSnap.data());
+          });
+          return teams;
+        },
+        subscribeToTeams(callback) {
+          const teamsCol = collection(db, 'teams');
+          return onSnapshot(teamsCol, (snapshot) => {
+            const teams = [];
+            snapshot.forEach(docSnap => {
+              if (docSnap.id !== '_ping_test') teams.push(docSnap.data());
+            });
+            callback(teams);
+          }, (err) => {
+            console.warn('Teams subscription error:', err);
+          });
+        },
+        subscribeToTeam(teamId, callback) {
+          if (!teamId) return () => {};
+          const teamRef = doc(db, 'teams', teamId);
+          return onSnapshot(teamRef, (docSnap) => {
+            if (docSnap.exists()) callback(docSnap.data());
+            else callback(null);
+          }, (err) => {
+            console.warn(`Team ${teamId} subscription error:`, err);
+          });
+        }
+      };
+
+      window.dispatchEvent(new CustomEvent('quest-firebase-ready', { 
+        detail: { databaseId: fbConfig.firestoreDatabaseId } 
+      }));
+    }
+
+    startFirebase();
+  </script>
+
+  <style>
+    /* Mobile-first viewport constraints and layout stabilization */
+    html {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
+      -webkit-text-size-adjust: 100%;
+      box-sizing: border-box;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+    body {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    /* Prevent iOS Safari automatic zoom on inputs */
+    @media (max-width: 768px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+    }
+    /* Custom Industrial Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b111e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2e4161;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ea580c;
+    }
+    .steel-panel {
+      background: radial-gradient(circle at top left, #1a253a 0%, #111928 100%);
+      border: 1px solid rgba(234, 88, 12, 0.25);
+    }
+    .badge-glow {
+      box-shadow: 0 0 15px rgba(234, 88, 12, 0.35);
+    }
+    /* Mobile-first touch enhancements */
+    button, input, select, textarea, label {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .touch-none {
+      touch-action: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Smooth swipe animation effects */
+    .swipe-shimmer {
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+  </style>
+</head>
+<body class="bg-industrial-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-orange-500 selection:text-white antialiased">
+
+  <!-- TOP NAVBAR -->
+  <header id="top-navbar" class="bg-industrial-900 border-b border-industrial-800 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-6xl mx-auto px-2.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0 flex-1" onclick="navigateByRole()">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-orange-600/20 border border-orange-500/40 flex items-center justify-center text-orange-500 shadow-inner flex-shrink-0">
+          <i class="fa-solid fa-mountain-sun text-base sm:text-xl"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <h1 class="font-black tracking-wide text-xs sm:text-base uppercase text-white flex items-center gap-1.5 truncate">
+            Vítkovice Quest <span class="text-orange-500 text-[9px] sm:text-xs px-1.5 py-0.5 rounded bg-orange-950/60 border border-orange-800 font-bold flex-shrink-0">2026</span>
+          </h1>
+          <p class="hidden xs:block text-[10px] sm:text-xs text-slate-400 font-medium truncate">Adaptační kurz • RZ Vítkovice, Horní Bečva</p>
+        </div>
+      </div>
+
+      <!-- Header actions & Mode switch -->
+      <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
+        <div id="header-team-badge" class="hidden items-center gap-1 sm:gap-1.5 bg-industrial-850 px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg border border-industrial-700">
+          <i class="fa-solid fa-hotel text-orange-400 text-[10px] sm:text-xs"></i>
+          <span id="header-team-name" class="font-bold text-[11px] sm:text-xs text-orange-200 truncate max-w-[70px] xs:max-w-[100px] sm:max-w-[140px]"></span>
+          <span class="text-slate-500 text-[10px]">|</span>
+          <i class="fa-solid fa-star text-amber-400 text-[10px] sm:text-xs"></i>
+          <span id="header-team-score" class="font-extrabold text-[11px] sm:text-xs text-amber-300">0 b</span>
+        </div>
+
+        <button id="nav-mode-btn" onclick="toggleTeacherPlayerMode()" class="text-[11px] sm:text-xs font-bold px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-industrial-800 hover:bg-industrial-700 active:bg-industrial-750 text-slate-300 border border-industrial-700 transition flex items-center gap-1 flex-shrink-0">
+          <i class="fa-solid fa-arrow-right-arrow-left text-orange-400 text-xs"></i>
+          <span id="nav-mode-text" class="hidden xs:inline">Režim</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-grow max-w-6xl w-full mx-auto p-2.5 sm:p-5 md:p-8">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: UČITEL (Administrace / Dashboard) -->
+    <!-- ========================================== -->
+    <section id="view-teacher" class="hidden space-y-6">
+      
+      <!-- Top banner for teacher -->
+      <div class="steel-panel p-4 sm:p-6 rounded-2xl relative overflow-hidden shadow-2xl">
+        <div class="absolute -right-6 -bottom-6 text-industrial-800/30 text-8xl pointer-events-none">
+          <i class="fa-solid fa-mountain"></i>
+        </div>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-950/60 border border-orange-600/30 text-orange-400 text-xs font-bold uppercase tracking-wider mb-1.5">
+              <i class="fa-solid fa-shield-halved"></i> Učitelský Velín
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-white">Administrace a živé výsledky</h2>
+            <p class="text-slate-300 text-xs sm:text-sm mt-0.5">
+              Rekreační zařízení Vítkovice, Horní Bečva • Sledujte postup pokojů v reálném čase.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <div id="cloud-status-badge" class="px-2.5 py-1.5 rounded-xl bg-industrial-850 border border-industrial-700 text-xs font-semibold flex items-center gap-1.5 text-slate-300">
+              <span id="cloud-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="cloud-status-text">Cloud DB aktivní</span>
+            </div>
+            <button onclick="switchView('registration')" class="px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-1.5">
+              <i class="fa-solid fa-play"></i> Otestovat hru
+            </button>
+            <button onclick="refreshLeaderboard(true)" class="px-3.5 py-2 rounded-xl bg-industrial-800 hover:bg-industrial-700 text-slate-200 font-semibold text-xs sm:text-sm border border-industrial-700 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-arrows-rotate"></i> Obnovit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid: QR Code Generator & Quick Stats -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- QR Code Generator (5 cols) -->
+        <div class="lg:col-span-5 steel-panel p-4 sm:p-6 rounded-2xl flex flex-col justify-between">
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2 mb-1">
+              <i class="fa-solid fa-qrcode text-orange-500"></i> QR Kód pro žáky
+            </h3>
+            <p class="text-xs text-slate-400 mb-3">
+              Žáci naskenují tento QR kód telefonem pro vstup do hry a registraci pokoje.
+            </p>
+
+            <!-- QR Code container -->
+            <div class="bg-white p-3 sm:p-4 rounded-2xl flex flex-col items-center justify-center mx-auto w-fit shadow-lg my-3 min-h-[220px] min-w-[220px] border-4 border-industrial-800">
+              <div id="qrcode-canvas" class="flex items-center justify-center min-h-[190px] min-w-[190px]"></div>
+              <span class="text-[10px] font-bold text-slate-600 mt-1.5 tracking-wide uppercase">Vítkovice Quest • Horní Bečva</span>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="flex items-center justify-center gap-2 mb-3">
+              <button onclick="downloadQrCode()" class="px-3 py-1.5 bg-industrial-850 hover:bg-industrial-800 text-slate-200 border border-industrial-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-download text-orange-400"></i> Stáhnout PNG
+              </button>
+              <button onclick="openPlayerUrl()" class="px-3 py-1.5 bg-industrial-850 hover:bg-industrial-800 text-slate-200 border border-industrial-700 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-orange-400"></i> Otevřít odkaz
+              </button>
+            </div>
+
+            <!-- URL Link box -->
+            <div class="mt-2">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Odkaz pro hráče:</label>
+              <div class="flex items-center gap-2">
+                <input id="qr-url-input" type="text" readonly class="w-full bg-industrial-950 border border-industrial-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none select-all" />
+                <button onclick="copyPlayerUrl()" class="px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap shadow">
+                  <i class="fa-regular fa-copy"></i> Kopírovat
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-industrial-800 flex items-center justify-between text-xs text-slate-400">
+            <span><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Aktivní</span>
+            <button onclick="generateQrCode()" class="text-orange-400 hover:underline font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-rotate text-xs"></i> Přegenerovat QR
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats Overview & Instructions (7 cols) -->
+        <div class="lg:col-span-7 space-y-4">
+          
+          <!-- Stat cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-industrial-900 border border-industrial-800 p-3.5 rounded-xl text-center sm:text-left">
+              <div class="text-slate-400 text-xs font-medium">Pokoje</div>
+              <div id="stat-total-teams" class="text-2xl font-black text-white mt-0.5">0</div>
+              <div class="text-[11px] text-slate-500">registrovaných</div>
+            </div>
+            <div class="bg-industrial-900 border border-industrial-800 p-3.5 rounded-xl text-center sm:text-left">
+              <div class="text-slate-400 text-xs font-medium">V cíli</div>
+              <div id="stat-completed-teams" class="text-2xl font-black text-emerald-400 mt-0.5">0</div>
+              <div id="stat-completed-subtitle" class="text-[11px] text-slate-500">splněno 11/11</div>
+            </div>
+            <div class="bg-industrial-900 border border-industrial-800 p-3.5 rounded-xl text-center sm:text-left">
+              <div class="text-slate-400 text-xs font-medium">Průměr</div>
+              <div id="stat-avg-score" class="text-2xl font-black text-amber-400 mt-0.5">0</div>
+              <div id="stat-avg-subtitle" class="text-[11px] text-slate-500">průměrné skóre</div>
+            </div>
+            <div class="bg-industrial-900 border border-industrial-800 p-3.5 rounded-xl text-center sm:text-left">
+              <div class="text-slate-400 text-xs font-medium">Fotky</div>
+              <div id="stat-total-photos" class="text-2xl font-black text-cyan-400 mt-0.5">0</div>
+              <div class="text-[11px] text-slate-500">nahraných</div>
+            </div>
+          </div>
+
+          <!-- Quick Actions & Reset Card -->
+          <div class="bg-industrial-900 border border-industrial-800 p-4 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-orange-500"></i> Správa a export
+              </h4>
+              <div class="flex gap-2">
+                <button onclick="exportToCsv()" class="px-3 py-1.5 rounded-lg bg-industrial-800 hover:bg-industrial-700 text-slate-200 text-xs font-bold border border-industrial-700 transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-file-csv text-emerald-400"></i> CSV
+                </button>
+                <button onclick="confirmResetAllData()" class="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-bold border border-red-800/50 transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-trash-can text-red-400"></i> Reset
+                </button>
+              </div>
+            </div>
+            <div class="bg-industrial-850 p-2.5 rounded-lg border border-industrial-800 text-[11px] text-slate-400">
+              <i class="fa-solid fa-circle-info text-amber-400 mr-1"></i> Data se ukládají lokálně v prohlížeči. Pro živý přehled nechte tento displej otevřený na projektoru/tabletu.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Live Leaderboard Table Section -->
+      <div class="steel-panel p-4 sm:p-6 rounded-2xl shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-trophy text-amber-400"></i> Výsledky pokojů
+            </h3>
+            <p class="text-xs text-slate-400">Aktuální stav a fotografie ze všech stanovišť</p>
+          </div>
+          <div class="relative w-full sm:w-48">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+            <input id="table-search-input" oninput="filterLeaderboard()" type="text" placeholder="Hledat pokoj..." class="w-full bg-industrial-950 border border-industrial-700 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-2 focus:outline-none focus:border-orange-500" />
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="overflow-x-auto rounded-xl border border-industrial-800 -mx-1 sm:mx-0">
+          <table class="w-full text-left text-sm text-slate-300 min-w-[550px]">
+            <thead class="bg-industrial-850 text-[11px] uppercase text-slate-400 border-b border-industrial-800">
+              <tr>
+                <th scope="col" class="py-3 px-3 font-bold"># / Pokoj</th>
+                <th scope="col" class="py-3 px-3 font-bold">Úkol</th>
+                <th scope="col" class="py-3 px-3 font-bold text-center">Body</th>
+                <th scope="col" class="py-3 px-3 font-bold">Start / Čas</th>
+                <th scope="col" class="py-3 px-3 font-bold">Fotky</th>
+                <th scope="col" class="py-3 px-3 font-bold text-right">Akce</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-tbody" class="divide-y divide-industrial-800 bg-industrial-900/60 font-medium text-xs sm:text-sm">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty state placeholder -->
+        <div id="table-empty-state" class="hidden py-8 text-center">
+          <div class="w-12 h-12 rounded-full bg-industrial-850 flex items-center justify-center mx-auto text-slate-600 text-xl mb-2">
+            <i class="fa-solid fa-users-slash"></i>
+          </div>
+          <h4 class="text-sm font-bold text-slate-300">Zatím žádný registrovaný pokoj</h4>
+          <p class="text-xs text-slate-500 mt-0.5">Naskenujte QR kód výše telefonem.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: REGISTRACE TÝMU (Mobile-Optimized) -->
+    <!-- ========================================== -->
+    <section id="view-registration" class="hidden max-w-md mx-auto py-2 sm:py-8 px-1">
+      <div class="steel-panel p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl border border-orange-600/30 text-center relative overflow-hidden">
+        
+        <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-orange-600/20 border border-orange-500/40 flex items-center justify-center text-orange-500 text-2xl sm:text-4xl mx-auto mb-3 sm:mb-4 shadow-inner animate-pulse-slow">
+          <i class="fa-solid fa-mountain-sun"></i>
+        </div>
+
+        <div class="inline-block px-3 py-1 rounded-full bg-orange-950/60 border border-orange-700/40 text-orange-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-2">
+          Vítkovice Quest • Horní Bečva
+        </div>
+        <h2 class="text-xl sm:text-3xl font-black text-white mb-1.5">Registrace pokoje</h2>
+        <p class="text-slate-300 text-xs sm:text-sm mb-4 sm:mb-5 leading-relaxed">
+          Zadejte číslo pokoje nebo název týmu a vyrazte na stanoviště a výzvy v areálu RZ Vítkovice na Horní Bečvě.
+        </p>
+
+        <!-- Existing active team resume banner (if any) -->
+        <div id="resume-team-banner" class="hidden mb-4 sm:mb-5 p-3 rounded-xl bg-orange-950/50 border border-orange-600/50 text-left">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="text-[10px] text-orange-300 font-bold uppercase">Rozehraná hra:</div>
+              <div id="resume-team-name" class="text-xs sm:text-sm font-black text-white truncate"></div>
+            </div>
+            <button onclick="resumeActiveTeam()" class="px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition flex-shrink-0">
+              Pokračovat <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+        </div>
+
+        <form id="registration-form" onsubmit="handleTeamRegistration(event)" class="space-y-4 sm:space-y-5 text-left">
+          <div>
+            <label for="team-name-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+              <i class="fa-solid fa-door-open text-orange-400 mr-1"></i> Číslo pokoje nebo název týmu:
+            </label>
+            <input 
+              type="text" 
+              id="team-name-input" 
+              required 
+              placeholder="Např. Pokoj 101, Pokoj 204..." 
+              class="w-full bg-industrial-950 border-2 border-industrial-700 focus:border-orange-500 text-white text-base rounded-xl px-4 py-3.5 focus:outline-none transition font-semibold"
+              autocomplete="off"
+            />
+
+            <!-- Quick tap room presets for fast mobile selection -->
+            <div class="mt-2.5">
+              <div class="text-[10px] uppercase font-bold text-slate-400 mb-1.5 flex items-center gap-1">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Rychlý výběr pokoje:
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <button type="button" onclick="selectRoomPreset('Pokoj 1')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 1</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 2')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 2</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 3')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 3</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 4')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 4</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 5')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 5</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 6')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 6</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 7')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 7</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 8')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 8</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 9')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 9</button>
+                <button type="button" onclick="selectRoomPreset('Pokoj 10')" class="px-2.5 py-1 rounded-lg bg-industrial-900 hover:bg-industrial-800 border border-industrial-700 text-xs font-semibold text-slate-300 transition cursor-pointer active:scale-95">Pokoj 10</button>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            class="w-full py-3.5 sm:py-4 rounded-xl bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-orange-950/60 transition flex items-center justify-center gap-2 tracking-wide cursor-pointer"
+          >
+            <span>Vstoupit do hry</span>
+            <i class="fa-solid fa-bolt text-amber-300"></i>
+          </button>
+        </form>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: HRA (10 Stanovišť) -->
+    <!-- ========================================== -->
+    <section id="view-game" class="hidden max-w-3xl mx-auto space-y-4 sm:space-y-6">
+      
+      <!-- Team Status Bar -->
+      <div class="bg-industrial-900 border border-industrial-800 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2.5 shadow-lg">
+        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-orange-950/80 border border-orange-600/40 flex items-center justify-center text-orange-400 text-sm sm:text-lg flex-shrink-0">
+            <i class="fa-solid fa-people-group"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-wider font-bold">Aktivní tým</div>
+            <div id="game-team-name" class="text-xs sm:text-base font-black text-white truncate"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <div class="text-right">
+            <div class="text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-wider font-bold">Skóre</div>
+            <div id="game-team-score" class="text-sm sm:text-lg font-black text-amber-400">0 b</div>
+          </div>
+          <div class="bg-industrial-800 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-industrial-700 text-center">
+            <div class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold">Úkol</div>
+            <div id="game-step-counter" class="text-xs sm:text-sm font-extrabold text-orange-400">1 / 10</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step Progress Nodes (1 to 10) -->
+      <div class="bg-industrial-900/60 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-industrial-800 overflow-x-auto no-scrollbar w-full">
+        <div class="flex items-center justify-between w-full min-w-[280px]" id="quest-stepper">
+          <!-- Dynamically populated 10 step circles with flexible connecting lines -->
+        </div>
+      </div>
+
+      <!-- Active Task Card -->
+      <div id="task-card" class="steel-panel p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl shadow-2xl relative w-full overflow-hidden">
+        
+        <!-- Task Header -->
+        <div class="flex items-center justify-between border-b border-industrial-800 pb-3 sm:pb-4 mb-4 sm:mb-6 gap-2">
+          <div class="flex items-center gap-2">
+            <span id="task-badge-step" class="px-3 py-1 rounded-xl bg-orange-600/20 border border-orange-500/40 text-orange-400 text-xs sm:text-sm font-extrabold uppercase tracking-wide">
+              Stanoviště 1
+            </span>
+          </div>
+          <div class="flex items-center gap-1.5 text-amber-400 font-extrabold text-xs sm:text-sm flex-shrink-0">
+            <i class="fa-solid fa-coins"></i>
+            <span id="task-points-val">+100 bodů</span>
+          </div>
+        </div>
+
+        <!-- Task Title & Description -->
+        <div class="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+          <h3 id="task-title" class="text-lg sm:text-2xl font-black text-white leading-snug break-words"></h3>
+          <p id="task-desc" class="text-slate-300 text-xs sm:text-base leading-relaxed break-words"></p>
+        </div>
+
+        <!-- Dynamic Task Form Container -->
+        <form id="task-form" onsubmit="handleTaskSubmit(event)" class="space-y-4 sm:space-y-5">
+          
+          <div id="task-interactive-container">
+            <!-- Injected depending on task type: Quiz options / Code input / File upload / Text Riddle / Number input -->
+          </div>
+
+          <!-- Feedback / Error Banner -->
+          <div id="task-feedback" class="hidden p-3 sm:p-3.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 transition">
+            <i id="feedback-icon" class="fa-solid fa-circle-exclamation text-base"></i>
+            <span id="feedback-message"></span>
+          </div>
+
+          <!-- Task Actions: Hint & Skip buttons -->
+          <div class="flex items-center justify-between gap-2.5 pt-3 border-t border-industrial-800/80">
+            <!-- Task Hint (if present) -->
+            <div id="task-hint-container" class="hidden">
+              <button type="button" onclick="toggleTaskHint()" class="text-xs font-bold text-amber-400 hover:text-amber-300 bg-amber-950/40 hover:bg-amber-950/60 border border-amber-800/60 px-3.5 py-2 rounded-xl transition flex items-center gap-2">
+                <i class="fa-regular fa-lightbulb"></i> <span id="hint-btn-text">Zobrazit nápovědu</span>
+              </button>
+            </div>
+            
+            <!-- Skip Task Button (Available on all questions/tasks) -->
+            <div id="task-skip-container" class="ml-auto">
+              <button 
+                type="button" 
+                onclick="skipCurrentTask()" 
+                class="text-xs font-bold text-slate-400 hover:text-white bg-industrial-950/80 hover:bg-industrial-800 active:bg-industrial-900 border border-industrial-700/80 hover:border-slate-500 px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                title="Přeskočit tento úkol bez zisku bodů"
+              >
+                <i class="fa-solid fa-forward-step text-slate-400"></i>
+                <span>Přeskočit</span>
+              </button>
+            </div>
+          </div>
+
+        </form>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: GRATULACE (Konec hry) -->
+    <!-- ========================================== -->
+    <section id="view-congrats" class="hidden max-w-2xl mx-auto py-3 sm:py-6 space-y-4 sm:space-y-6 px-1">
+      
+      <div class="steel-panel p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl border-2 border-amber-500/40 text-center relative overflow-hidden">
+        
+        <!-- Trophy & Glow -->
+        <div class="relative z-10">
+          <div class="w-18 h-18 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-amber-500/20 border-2 border-amber-400/50 flex items-center justify-center text-amber-400 text-4xl sm:text-5xl mx-auto mb-3 sm:mb-4 badge-glow animate-bounce">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+
+          <div class="inline-block px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-emerald-950/80 border border-emerald-600/50 text-emerald-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-2 sm:mb-3">
+            Vítkovice Quest 2026 Dokončen!
+          </div>
+
+          <h2 class="text-2xl sm:text-4xl font-black text-white mb-1.5 sm:mb-2">Gratulujeme!</h2>
+          <p class="text-slate-300 text-xs sm:text-base max-w-md mx-auto mb-4 sm:mb-6">
+            Váš tým <span id="congrats-team-name" class="text-orange-400 font-extrabold"></span> úspěšně zvládl všechna stanoviště adaptačního kurzu!
+          </p>
+
+          <!-- Score Highlight Box -->
+          <div class="bg-industrial-900/90 border border-industrial-800 p-4 sm:p-6 rounded-2xl max-w-md mx-auto mb-4 sm:mb-6 grid grid-cols-2 gap-3 sm:gap-4">
+            <div>
+              <div class="text-[10px] sm:text-xs uppercase text-slate-400 font-bold">Celkové body</div>
+              <div id="congrats-total-score" class="text-2xl sm:text-3xl font-black text-amber-400 mt-0.5 sm:mt-1">0 b</div>
+              <div id="congrats-max-score" class="text-[10px] sm:text-[11px] text-slate-500">dokončeno</div>
+            </div>
+            <div>
+              <div class="text-[10px] sm:text-xs uppercase text-slate-400 font-bold">Čas v terénu</div>
+              <div id="congrats-duration" class="text-xl sm:text-2xl font-black text-slate-200 mt-0.5 sm:mt-1">--:--</div>
+              <div id="congrats-completed-at" class="text-[10px] sm:text-[11px] text-slate-500">dokončeno</div>
+            </div>
+          </div>
+
+          <!-- Photo Gallery of Uploaded Photos -->
+          <div id="congrats-photos-section" class="text-left space-y-2.5 sm:space-y-3">
+            <h4 class="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-camera text-orange-400"></i> Vaše pořízené týmové fotografie
+            </h4>
+            <div id="congrats-photos-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <!-- Dynamically populated photos from step 4, 6, 8 -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- PHOTO LIGHTBOX MODAL -->
+  <div id="photo-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="relative max-w-3xl w-full m-auto bg-industrial-900 border border-industrial-700 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between p-4 bg-industrial-850 border-b border-industrial-800">
+        <div>
+          <h4 id="photo-modal-title" class="font-bold text-white text-sm">Fotografie ze stanoviště</h4>
+          <p id="photo-modal-subtitle" class="text-xs text-slate-400"></p>
+        </div>
+        <button onclick="closePhotoModal()" class="w-8 h-8 rounded-full bg-industrial-800 hover:bg-industrial-700 text-slate-300 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="p-4 flex items-center justify-center bg-black/60 min-h-[250px] max-h-[70vh]">
+        <img id="photo-modal-img" src="" alt="Detail fotografie" class="max-h-[65vh] max-w-full rounded-lg object-contain mx-auto" />
+      </div>
+      <div class="p-3 bg-industrial-850 border-t border-industrial-800 flex items-center justify-end gap-2">
+        <a id="photo-modal-download" href="" download="vitkovice-quest-foto.jpg" class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-download"></i> Stáhnout foto
+        </a>
+        <button onclick="closePhotoModal()" class="px-4 py-2 bg-industrial-800 hover:bg-industrial-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer transition">
+          Zavřít
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM RESET MODAL -->
+  <div id="confirm-reset-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="max-w-md w-full m-auto bg-industrial-900 border border-red-700/60 rounded-2xl p-6 shadow-2xl space-y-4 text-center">
+      <div class="w-12 h-12 rounded-full bg-red-950/80 border border-red-600/60 flex items-center justify-center text-red-400 text-xl mx-auto">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white text-center">Opravdu smazat všechna data?</h3>
+      <p class="text-xs text-slate-300 text-center leading-relaxed">
+        Tato akce trvale odstraní všechny registrované pokoje, výsledky a nahrané fotografie z paměti tohoto prohlížeče. Tuto akci nelze vrátit.
+      </p>
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <button onclick="executeResetAllData()" class="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition cursor-pointer">
+          Ano, smazat vše
+        </button>
+        <button onclick="closeResetModal()" class="px-4 py-2.5 bg-industrial-800 hover:bg-industrial-700 text-slate-300 text-xs font-semibold rounded-xl transition cursor-pointer">
+          Zrušit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMINENT TASK OUTCOME MODAL (Large & Perfectly Centered) -->
+  <div id="task-outcome-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto transition-all duration-300">
+    <div id="task-outcome-box" class="relative max-w-[340px] xs:max-w-sm sm:max-w-md w-full m-auto mx-auto bg-industrial-900 border-2 rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-center shadow-2xl space-y-3 sm:space-y-4 transform transition-all duration-300 scale-95 opacity-0 max-h-[92vh] overflow-y-auto no-scrollbar">
+      
+      <!-- Icon badge -->
+      <div id="outcome-icon-container" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl flex items-center justify-center text-3xl sm:text-4xl mx-auto shadow-inner">
+        <i id="outcome-icon" class="fa-solid fa-star"></i>
+      </div>
+
+      <!-- Text Container (Big & Aligned) -->
+      <div class="space-y-1 text-center">
+        <h3 id="outcome-title" class="text-xl sm:text-2xl font-black text-white tracking-wide">Výborně!</h3>
+        <div id="outcome-points" class="text-lg sm:text-xl font-extrabold text-emerald-400">Získáváte +100 bodů</div>
+      </div>
+
+      <div id="outcome-desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed"></div>
+
+      <!-- Nature Break / Lock Box -->
+      <div id="outcome-nature-box" class="hidden p-3.5 bg-emerald-950/80 border-2 border-emerald-500/60 rounded-2xl text-center space-y-2.5 shadow-inner mx-auto w-full">
+        <div class="flex items-center justify-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
+          <i class="fa-solid fa-tree text-emerald-400 text-sm"></i>
+          <span>Pauza na přírodu & procházku</span>
+        </div>
+        <p class="text-[11px] sm:text-xs text-emerald-100/90 leading-relaxed font-medium">
+          Čas na krátký odpočinek od obrazovky! Rozhlédněte se po beskydských horách kolem sebe, zhluboka se nadechněte a užijte si procházku se svým týmem.
+        </p>
+        <div class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-industrial-950/90 border border-amber-500/60 rounded-xl text-amber-400 font-mono font-black text-sm tracking-widest shadow">
+          <i class="fa-regular fa-clock text-amber-400"></i>
+          <span id="nature-countdown-text">05:00</span>
+        </div>
+      </div>
+
+      <div class="pt-1">
+        <button id="outcome-continue-btn" onclick="proceedToNextStep()" class="w-full py-3.5 px-6 rounded-xl font-black text-xs sm:text-sm text-white shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+          <span>Pokračovat</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION (Centered on screen) -->
+  <div class="fixed bottom-6 inset-x-0 z-50 flex justify-center pointer-events-none px-4">
+    <div id="toast" class="bg-industrial-900 border-2 border-orange-500/80 text-white text-xs sm:text-sm font-bold px-4 sm:px-5 py-3 rounded-2xl shadow-2xl shadow-black/80 transform translate-y-12 opacity-0 transition-all duration-300 flex items-center gap-2.5 max-w-md pointer-events-auto ring-4 ring-orange-500/20 text-center mx-auto">
+      <i class="fa-solid fa-circle-check text-orange-400 text-sm sm:text-base shrink-0"></i>
+      <span id="toast-msg">Oznámení</span>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-industrial-900 bg-industrial-950 text-slate-500 text-xs py-4 text-center">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>
+        <strong>Vítkovice Quest 2026</strong> • Školní adaptační kurz
+      </div>
+      <div>
+        Rekreační zařízení Vítkovice • Horní Bečva (Beskydy)
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT GAME ENGINE & STORAGE LOGIC -->
+  <!-- ========================================== -->
+  <script>
+    /**
+     * VÍTKOVICE QUEST 2026 - GAME STATE & TASKS DATA
+     */
+
+    // Storage Keys
+    const STORAGE_KEY_TEAMS = 'vitkovice_quest_2026_teams';
+    const STORAGE_KEY_ACTIVE_TEAM_ID = 'vitkovice_quest_2026_active_team_id';
+
+    // Tasks Specification for RZ Vítkovice - Horní Bečva
+    const TASKS = [
+      {
+        id: 1,
+        title: "Pokojová rarita",
+        badge: "Foto výzva",
+        badgeIcon: "fa-camera-retro",
+        points: 0,
+        alwaysFirst: true,
+        desc: "Najděte a vyfoťte něco, co si s sebou přivezl někdo z vašeho pokoje a podle vás to žádný jiný pokoj nemá.<div class=\"mt-4 p-3.5 sm:p-4 rounded-2xl bg-amber-950/30 border border-amber-500/40 text-slate-200 text-xs sm:text-sm leading-relaxed shadow-sm\"><span class=\"text-amber-400 font-bold\"><i class=\"fa-solid fa-triangle-exclamation mr-1.5\"></i>Vyberte dobře!</span> Pokud stejnou věc vyfotí i jiný pokoj, o body přicházíte.</div>",
+        type: "photo",
+        hint: null
+      },
+      {
+        id: 2,
+        title: "Pravda nebo lež o naší škole",
+        badge: "Kvíz",
+        badgeIcon: "fa-question-circle",
+        points: 100,
+        desc: "Které z následujících tvrzení o naší škole je <strong class=\"text-orange-400 font-black underline decoration-orange-500/60 underline-offset-2 uppercase tracking-wide\">PRAVDIVÉ</strong>?",
+        type: "quiz",
+        options: [
+          { id: "A", text: "V kabinetu spolu sedí tři češtináři kteří se jmenují Pavel, Pavla a Pavlína." },
+          { id: "B", text: "Pokud student při zkoušení špatně obváže ruku spolužákovi, podle tradice v tom obvazu musí chodit celý zbytek dne." },
+          { id: "C", text: "Budova školy původně sloužila jako zámecký pivovar." },
+          { id: "D", text: "Při chůzi bez přezůvek má dozor právo zabavit jednu botu až do konce roku." }
+        ],
+        correctAnswer: "A",
+        hint: null
+      },
+      {
+        id: 3,
+        title: "Poznej svého vedoucího",
+        badge: "Týmová výzva",
+        badgeIcon: "fa-user-tie",
+        points: 150,
+        desc: "Najdi jednoho z vedoucích kurzu a zeptej se ho na cokoliv, co tě zajímá.<br><br>Otázka může být vážná, vtipná, týkající se školy nebo úplně náhodná. Zjisti jeho odpověď a pak mu předej telefon.<br><br><span class=\"text-emerald-400 font-extrabold flex items-center justify-center gap-1.5 p-2 bg-emerald-950/60 rounded-xl border border-emerald-500/50 text-xs sm:text-sm\"><i class=\"fa-solid fa-angles-right text-emerald-400\"></i> Pokud rozhovor proběhl, vedoucí potáhne zelený jezdec doprava pro potvrzení splnění.</span>",
+        type: "leader-confirm",
+        hint: "Nebojte se zeptat na cokoliv – na oblíbené jídlo, hudbu, zážitky ze školy nebo co vedoucího nejvíc baví na kurzu!"
+      },
+      {
+        id: 4,
+        title: "Vedoucí na adaptačním kurzu",
+        badge: "Kvíz",
+        badgeIcon: "fa-user-group",
+        points: 150,
+        desc: "Jak se jmenují vedoucí na adaptačním kurzu?",
+        type: "quiz",
+        options: [
+          { id: "A", text: "Petr, Jiří, David a Eva" },
+          { id: "B", text: "Martin, Tomáš, Lucie a Jan" },
+          { id: "C", text: "Michal, Pavel, Lenka a Marek" },
+          { id: "D", text: "Karel, Roman, Zuzana a Filip" }
+        ],
+        correctAnswer: "A",
+        hint: null
+      },
+      {
+        id: 5,
+        title: "Selfie nejmladšího a nejstaršího",
+        badge: "Foto výzva",
+        badgeIcon: "fa-camera-retro",
+        points: 120,
+        desc: "Nejmladší a nejstarší z pokoje společně pořídí a nahrají selfie!",
+        type: "photo",
+        hint: null
+      },
+      {
+        id: 6,
+        title: "Původ názvu Šorštýn",
+        badge: "Kvíz",
+        badgeIcon: "fa-language",
+        points: 100,
+        desc: "Ze kterého jazyka a slova pochází název beskydského kopce Šorštýn?",
+        type: "quiz",
+        options: [
+          { id: "A", text: "Z němčiny (Schornstein - komín)" },
+          { id: "B", text: "Z polštiny (Szorstyn - drsný)" },
+          { id: "C", text: "Ze staroslověnštiny (Šorst - strmá skála)" },
+          { id: "D", text: "Z maďarštiny (Sorostény - strážní věž)" }
+        ],
+        correctAnswer: "A",
+        hint: null
+      },
+      {
+        id: 7,
+        title: "Najdi živočicha (limit 1 min)",
+        badge: "Foto výzva (1 min)",
+        badgeIcon: "fa-bug",
+        points: 150,
+        desc: "Vyfoťte jakéhokoliv živého tvora v areálu (pták, brouk, mravenec, motýl, ještěrka, pavouk, pes atd.). <span class=\"text-amber-400 font-extrabold block mt-1\"><i class=\"fa-solid fa-stopwatch\"></i> Pozor: Máte na to časový limit pouze 1 minuta!</span>",
+        type: "photo",
+        timeLimit: 60,
+        hint: null
+      },
+      {
+        id: 8,
+        title: "Horská hádanka: Ztracený horolezec",
+        badge: "Logický kvíz",
+        badgeIcon: "fa-brain",
+        points: 120,
+        desc: "Tři horolezci (Petr, Pavel a Jan) stoupají na vrchol hory. Jeden z nich nese lano, druhý stan a třetí vařič.<br><br>• <strong>Petr</strong> nese lano.<br>• <strong>Jan</strong> nese stan.<br>• Ten, kdo nese <strong>vařič</strong>, jde vždy jako první.<br>• <strong>Petr</strong> jde jako poslední, protože hlídá konec výpravy.<br><br><span class=\"text-orange-400 font-extrabold\">Otázka: V jakém pořadí horolezci stoupají na horu (od prvního po posledního)?</span>",
+        type: "quiz",
+        options: [
+          { id: "A", text: "Pavel, Jan, Petr" },
+          { id: "B", text: "Petr, Jan, Pavel" },
+          { id: "C", text: "Jan, Pavel, Petr" },
+          { id: "D", text: "Pavel, Petr, Jan" }
+        ],
+        correctAnswer: "A",
+        hint: null,
+        explanation: "Petr jde poslední. Víme, že první jde ten s vařičem. Jan má stan a Petr lano, takže vařič musí mít Pavel. Pavel jde tedy první, Jan uprostřed a Petr poslední."
+      },
+      {
+        id: 9,
+        title: "Krásný okamžik přírody",
+        badge: "Foto výzva",
+        badgeIcon: "fa-camera",
+        points: 200,
+        desc: "Najděte na trase místo, které vás něčím zaujme – krásný výhled, zajímavý strom, skálu, les nebo jiný přírodní detail.<br><br><strong class=\"text-orange-400 font-black\">Úkol:</strong> Zachyťte jeden krásný okamžik přírody a nahrajte fotografii.",
+        type: "photo",
+        hint: null
+      },
+      {
+        id: 10,
+        title: "Týmová výzva: Co tě zajímá?",
+        badge: "Týmová výzva",
+        badgeIcon: "fa-comments",
+        points: 200,
+        desc: "Žák s <strong>nejkratšími vlasy</strong> vymyslí otázku, na kterou by opravdu chtěl znát odpověď od žáka s <strong>nejdelšími vlasy</strong>. Žák s <strong>nejdelšími vlasy</strong> na otázku odpoví.<br><br><strong class=\"text-orange-400 font-black\">Úkol:</strong> Nahrajte otázku i odpověď hlasem přes mikrofon.",
+        type: "interview",
+        hint: "Můžete se zeptat například na oblíbený film, nejlepší zážitek z léta, oblíbenou kapelu, koníček, vysněné cestování nebo na to, na co se na tomto kurzu nejvíc těší!"
+      },
+      {
+        id: 11,
+        title: "Seznamte se s vedoucími",
+        badge: "Kvíz",
+        badgeIcon: "fa-user-group",
+        points: 200,
+        alwaysLast: true,
+        desc: "Co možná nevíte o vašich vedoucích? Každý z nich má jednu zajímavou „tajnou“ dovednost nebo zálibu. Jeden z těchto faktů je ale <strong class=\"text-orange-400 font-black underline decoration-orange-500/60 underline-offset-2 uppercase tracking-wide\">LEŽ</strong>.<br><br>🎯 <strong>Eva</strong> – Když zrovna neučí matiku, můžete ji potkat na střelnici. Pistole, terč a přesná muška – to je její způsob odreagování.<br><br>🎧 <strong>David</strong> – Učitel informatiky ve škole, ale v pátek po vyučování dokáže rozjet pořádnou DJ session.<br><br>🎤 <strong>Petr</strong> – Ve škole ho potkáte jako učitele ošetřovatelství, ale mimo ni pravidelně bere mikrofon do ruky a zpívá na vystoupeních.<br><br>🎸 <strong>Jiří</strong> – Ve škole učitel chemie, mimo školu hraje v kapele. Takže pokud někde uslyšíte živou muziku, možná bude právě u toho.<br><br><span class=\"text-orange-400 font-extrabold\">Otázka: Který z těchto faktů o vedoucích je lež?</span>",
+        type: "quiz",
+        options: [
+          { id: "A", text: "Eva – střelba z pistole na střelnici" },
+          { id: "B", text: "David – DJ session po vyučování" },
+          { id: "C", text: "Petr – zpěv s mikrofonem na vystoupeních" },
+          { id: "D", text: "Jiří – hraní v kapele" }
+        ],
+        correctAnswer: "D",
+        hint: null,
+        explanation: "Správná odpověď: Jiří – nehraje v kapele (je to smyšlený fakt). Eva skutečně chodí na střelnici, David dělá DJ sessions a Petr pravidelně zpívá na vystoupeních."
+      }
+    ];
+
+    /**
+     * Helper Utilities for Dynamic Steps and Points
+     */
+    function getTotalTasks(team) {
+      if (team && Array.isArray(team.tasks) && team.tasks.length > 0) {
+        return team.tasks.length;
+      }
+      return TASKS.length;
+    }
+
+    function getMaxPossiblePoints(team) {
+      const taskList = (team && Array.isArray(team.tasks) && team.tasks.length > 0) ? team.tasks : TASKS;
+      return taskList.reduce((acc, t) => acc + (t.points || 0), 0);
+    }
+
+    /**
+     * Randomization and Shuffling Utilities (Fisher-Yates)
+     */
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function generateShuffledTasksForTeam() {
+      // 1. Deep clone base task templates
+      const clonedTasks = JSON.parse(JSON.stringify(TASKS));
+
+      // Helper to process and shuffle options within quiz questions
+      const processTaskOptions = (task) => {
+        if (task.type === 'quiz' && Array.isArray(task.options) && task.options.length > 0) {
+          const originalCorrect = task.options.find(o => o.id === task.correctAnswer);
+          const correctText = originalCorrect ? originalCorrect.text : null;
+
+          const shuffledOpts = shuffleArray(task.options);
+          const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+          let newCorrectLetter = 'A';
+
+          shuffledOpts.forEach((opt, idx) => {
+            const letter = letters[idx] || String.fromCharCode(65 + idx);
+            if (correctText && opt.text === correctText) {
+              newCorrectLetter = letter;
+            }
+            opt.id = letter;
+          });
+
+          task.options = shuffledOpts;
+          task.correctAnswer = newCorrectLetter;
+        }
+        return task;
+      };
+
+      // 2. Separate alwaysFirst tasks (strictly at start), normal tasks (shuffled), and alwaysLast tasks (strictly at end)
+      const fixedStartTasks = clonedTasks.filter(t => t.alwaysFirst).map(processTaskOptions);
+      const normalTasks = clonedTasks.filter(t => !t.alwaysFirst && !t.alwaysLast).map(processTaskOptions);
+      const fixedEndTasks = clonedTasks.filter(t => t.alwaysLast).map(processTaskOptions);
+
+      // 3. Return fixed start tasks followed by shuffled normal tasks followed by bonus/fixed end questions
+      return [...fixedStartTasks, ...shuffleArray(normalTasks), ...fixedEndTasks];
+    }
+
+    function getTaskForTeam(team, stepIndex) {
+      if (!team) return null;
+      if (Array.isArray(team.tasks) && team.tasks[stepIndex]) {
+        return team.tasks[stepIndex];
+      }
+      return TASKS[stepIndex] || null;
+    }
+
+    /**
+     * Helper to get display label, counter, and badge info for a task
+     * Excludes alwaysFirst (Pokojová rarita) and alwaysLast (Bonus) from the 10 main numbered scale
+     */
+    function getTaskStepDisplayInfo(team, taskIndex) {
+      const task = getTaskForTeam(team, taskIndex);
+      const taskList = (team && Array.isArray(team.tasks)) ? team.tasks : TASKS;
+      const totalMainTasks = taskList.filter(t => !t.alwaysFirst && !t.alwaysLast).length || 9;
+
+      if (!task) {
+        return {
+          badgeText: 'Úkol',
+          badgeClass: 'bg-industrial-800 text-slate-300',
+          counterText: `-- / ${totalMainTasks}`,
+          isIntro: false,
+          isBonus: false,
+          mainNumber: null,
+          stepTitleText: 'Úkol'
+        };
+      }
+
+      if (task.alwaysFirst) {
+        return {
+          badgeText: '🔎 Úvodní výzva',
+          badgeClass: 'bg-amber-500/20 border border-amber-500/50 text-amber-300 font-black',
+          counterText: 'Úvodní výzva',
+          isIntro: true,
+          isBonus: false,
+          mainNumber: null,
+          stepTitleText: 'Úvodní výzva: Pokojová rarita'
+        };
+      }
+
+      if (task.alwaysLast) {
+        return {
+          badgeText: '⭐ Bonusový úkol',
+          badgeClass: 'bg-amber-500/20 border border-amber-500/50 text-amber-300 font-black',
+          counterText: 'Bonus',
+          isIntro: false,
+          isBonus: true,
+          mainNumber: null,
+          stepTitleText: 'Bonusový úkol: Seznamte se s vedoucími'
+        };
+      }
+
+      // Count main tasks up to this index
+      let mainNumber = 0;
+      for (let i = 0; i <= taskIndex; i++) {
+        const t = taskList[i];
+        if (t && !t.alwaysFirst && !t.alwaysLast) {
+          mainNumber++;
+        }
+      }
+
+      return {
+        badgeText: `Stanoviště ${mainNumber}`,
+        badgeClass: 'bg-orange-600/20 border border-orange-500/40 text-orange-400 font-black',
+        counterText: `${mainNumber} / ${totalMainTasks}`,
+        isIntro: false,
+        isBonus: false,
+        mainNumber: mainNumber,
+        stepTitleText: `Stanoviště ${mainNumber}`
+      };
+    }
+
+    // State Variables
+    const NATURE_PAUSE_DURATION_MS = 5 * 60 * 1000; // 5 minutes nature walk pause every 3 questions
+    let natureLockTimerInterval = null;
+    let currentView = 'teacher'; // 'teacher' | 'registration' | 'game' | 'congrats'
+    let qrCodeInstance = null;
+    let selectedQuizOption = null;
+    let uploadedPhotoBase64 = null;
+    let isHintVisible = false;
+
+    // Firebase Firestore Initialization
+    let firestoreTeamsUnsubscribe = null;
+    let firestoreActiveTeamUnsubscribe = null;
+
+    function initFirebase() {
+      if (window.QuestFirebase) {
+        onFirebaseModuleReady();
+      } else {
+        window.addEventListener('quest-firebase-ready', onFirebaseModuleReady, { once: true });
+        // Polling fallback in case module loaded early/late
+        const checkInterval = setInterval(() => {
+          if (window.QuestFirebase) {
+            clearInterval(checkInterval);
+            onFirebaseModuleReady();
+          }
+        }, 150);
+        setTimeout(() => clearInterval(checkInterval), 4000);
+      }
+    }
+
+    function onFirebaseModuleReady() {
+      if (!window.QuestFirebase) return;
+      console.log('QuestFirebase module ready, testing cloud connection...');
+      updateCloudStatus(true, 'Google Firestore připojena');
+
+      // Test real connection to Google Cloud Firestore server
+      window.QuestFirebase.testConnection().then(isOnline => {
+        if (isOnline) {
+          console.log('Firebase Firestore connection verified with server');
+          updateCloudStatus(true, 'Google Firestore online');
+        } else {
+          console.warn('Firebase server offline, fallback active');
+          updateCloudStatus(false, 'Offline režim (Lokální)');
+        }
+      });
+
+      setupFirestoreRealtimeListeners();
+    }
+
+    function updateCloudStatus(isOnline, text) {
+      const dot = document.getElementById('cloud-status-dot');
+      const label = document.getElementById('cloud-status-text');
+      if (dot && label) {
+        if (isOnline) {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+          label.textContent = text || 'Cloud DB aktivní';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+          label.textContent = text || 'Offline režim';
+        }
+      }
+    }
+
+    /**
+     * INITIALIZATION
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      initFirebase();
+      initAppRouter();
+      generateQrCode();
+    });
+
+    function setupFirestoreRealtimeListeners() {
+      if (!window.QuestFirebase) return;
+
+      // 1. Leaderboard Realtime Listener for Teacher
+      try {
+        if (firestoreTeamsUnsubscribe) {
+          firestoreTeamsUnsubscribe();
+          firestoreTeamsUnsubscribe = null;
+        }
+        firestoreTeamsUnsubscribe = window.QuestFirebase.subscribeToTeams((remoteTeams) => {
+          if (remoteTeams && Array.isArray(remoteTeams)) {
+            // Keep local backup synchronized
+            localStorage.setItem(STORAGE_KEY_TEAMS, JSON.stringify(remoteTeams));
+            if (currentView === 'teacher') {
+              refreshLeaderboard(false);
+            }
+          }
+        });
+      } catch (e) {
+        console.error('Failed to setup teams realtime listener', e);
+      }
+
+      // 2. Active Team Realtime Listener for Player
+      subscribeToActiveTeamChanges();
+    }
+
+    function subscribeToActiveTeamChanges() {
+      if (!window.QuestFirebase) return;
+      const activeId = localStorage.getItem(STORAGE_KEY_ACTIVE_TEAM_ID);
+      if (!activeId) return;
+
+      if (firestoreActiveTeamUnsubscribe) {
+        firestoreActiveTeamUnsubscribe();
+        firestoreActiveTeamUnsubscribe = null;
+      }
+
+      try {
+        firestoreActiveTeamUnsubscribe = window.QuestFirebase.subscribeToTeam(activeId, (teamData) => {
+          if (teamData) {
+            const teams = getAllTeams();
+            const idx = teams.findIndex(t => t.id === activeId);
+            if (idx !== -1) {
+              teams[idx] = teamData;
+            } else {
+              teams.push(teamData);
+            }
+            localStorage.setItem(STORAGE_KEY_TEAMS, JSON.stringify(teams));
+            updateNavbar();
+          }
+        });
+      } catch (e) {
+        console.error('Failed to setup active team listener', e);
+      }
+    }
+
+    /**
+     * Router & URL Parameter Detection
+     */
+    function initAppRouter() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPlayerParam = (urlParams.has('mode') && urlParams.get('mode') === 'player') || (urlParams.has('code') && urlParams.get('code') === 'vitkovice');
+      const isTeacherParam = (urlParams.has('mode') && urlParams.get('mode') === 'teacher') || urlParams.has('teacher');
+
+      const activeTeam = getActiveTeam();
+
+      if (isTeacherParam) {
+        switchView('teacher');
+      } else if (activeTeam) {
+        // Automatically restore game if a team was already playing on this device!
+        if (activeTeam.currentStep > getTotalTasks(activeTeam)) {
+          switchView('congrats');
+        } else {
+          switchView('game');
+        }
+      } else if (isPlayerParam) {
+        switchView('registration');
+      } else {
+        // Teacher mode default for admin/desktop without active session
+        switchView('teacher');
+      }
+    }
+
+    /**
+     * View Switcher
+     */
+    function switchView(viewName) {
+      currentView = viewName;
+      
+      const views = ['teacher', 'registration', 'game', 'congrats'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) {
+          if (v === viewName) {
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        }
+      });
+
+      // Update Navigation button & header
+      updateNavbar();
+
+      // Render view-specific logic
+      if (viewName === 'teacher') {
+        refreshLeaderboard();
+        generateQrCode();
+      } else if (viewName === 'registration') {
+        checkResumeBanner();
+      } else if (viewName === 'game') {
+        renderCurrentTask();
+      } else if (viewName === 'congrats') {
+        renderCongratsScreen();
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateNavbar() {
+      const topNavbar = document.getElementById('top-navbar');
+      const activeTeam = getActiveTeam();
+      const teamBadge = document.getElementById('header-team-badge');
+      const teamName = document.getElementById('header-team-name');
+      const teamScore = document.getElementById('header-team-score');
+      const navModeBtn = document.getElementById('nav-mode-btn');
+      const navModeText = document.getElementById('nav-mode-text');
+
+      // V herním režimu (plnění kvízu / hra) je horní lišta skrytá, aby nezabírala místo a nerozptylovala žáky
+      if (currentView === 'game') {
+        if (topNavbar) topNavbar.classList.add('hidden');
+        return;
+      } else {
+        if (topNavbar) topNavbar.classList.remove('hidden');
+      }
+
+      if (activeTeam && currentView === 'congrats') {
+        teamBadge.classList.remove('hidden');
+        teamBadge.classList.add('flex');
+        teamName.textContent = activeTeam.roomName;
+        teamScore.textContent = `${activeTeam.score} b`;
+      } else {
+        teamBadge.classList.add('hidden');
+        teamBadge.classList.remove('flex');
+      }
+
+      // Bezpečnost: V herním módu (kvíz, registrace, gratulace) tlačítko do učitelského velínu vůbec nezobrazujeme!
+      if (currentView === 'teacher') {
+        if (navModeBtn) {
+          navModeBtn.classList.remove('hidden');
+        }
+        if (navModeText) {
+          navModeText.textContent = 'Hráčský mód';
+        }
+      } else {
+        if (navModeBtn) {
+          navModeBtn.classList.add('hidden');
+        }
+      }
+    }
+
+    function toggleTeacherPlayerMode() {
+      if (currentView === 'teacher') {
+        const activeTeam = getActiveTeam();
+        if (activeTeam) {
+          if (activeTeam.currentStep > getTotalTasks(activeTeam)) switchView('congrats');
+          else switchView('game');
+        } else {
+          switchView('registration');
+        }
+      } else {
+        // Vyžadovat heslo pro vstup do učitelského velínu
+        const pin = prompt('Zadejte učitelské heslo pro vstup do velínu:');
+        if (pin === '1234' || pin === 'ucitel' || pin === 'admin') {
+          switchView('teacher');
+        } else if (pin !== null) {
+          showToast('Nesprávné heslo! Přístup odepřen.');
+        }
+      }
+    }
+
+    function navigateByRole() {
+      if (currentView === 'teacher') {
+        refreshLeaderboard(true);
+      }
+      // V herním módu kliknutí na logo do velínu nepřepíná
+    }
+
+    /**
+     * STORAGE & FIRESTORE HELPERS
+     * Each room/team is strictly isolated in its own document under 'teams/{teamId}'
+     * preventing any team from overwriting another team's progress or state.
+     */
+    function getAllTeams() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY_TEAMS);
+        return data ? JSON.parse(data) : [];
+      } catch (e) {
+        console.error('Error reading teams from localStorage', e);
+        return [];
+      }
+    }
+
+    function saveAllTeams(teams) {
+      try {
+        localStorage.setItem(STORAGE_KEY_TEAMS, JSON.stringify(teams));
+      } catch (e) {
+        console.error('Error saving teams to localStorage', e);
+      }
+    }
+
+    function getActiveTeam() {
+      const activeId = localStorage.getItem(STORAGE_KEY_ACTIVE_TEAM_ID);
+      if (!activeId) return null;
+      const teams = getAllTeams();
+      return teams.find(t => t.id === activeId) || null;
+    }
+
+    function setActiveTeamId(id) {
+      localStorage.setItem(STORAGE_KEY_ACTIVE_TEAM_ID, id);
+      // Ensure listener attaches to this active room
+      if (typeof subscribeToActiveTeamChanges === 'function') {
+        subscribeToActiveTeamChanges();
+      }
+    }
+
+    function updateActiveTeam(updatedFields) {
+      const activeTeam = getActiveTeam();
+      if (!activeTeam) return null;
+
+      const teams = getAllTeams();
+      const index = teams.findIndex(t => t.id === activeTeam.id);
+      let mergedTeam = null;
+
+      if (index !== -1) {
+        mergedTeam = { ...teams[index], ...updatedFields, lastUpdated: Date.now() };
+        teams[index] = mergedTeam;
+        saveAllTeams(teams);
+      } else {
+        mergedTeam = { ...activeTeam, ...updatedFields, lastUpdated: Date.now() };
+        teams.push(mergedTeam);
+        saveAllTeams(teams);
+      }
+
+      // Persist isolated document directly to Cloud Firestore
+      if (window.QuestFirebase && mergedTeam.id) {
+        try {
+          window.QuestFirebase.saveTeamToFirestore(mergedTeam).catch(err => {
+            console.warn('Firestore team update error:', err);
+          });
+        } catch (e) {
+          console.error('Firestore save failed:', e);
+        }
+      }
+
+      return mergedTeam;
+    }
+
+    /**
+     * ==========================================
+     * 1. UČITEL LOGIC & QR GENERATOR
+     * ==========================================
+     */
+    function generateQrCode() {
+      // Calculate exact player URL regardless of environment (localhost, GitHub pages subpath, etc.)
+      const baseUrl = window.location.href.split('?')[0].split('#')[0];
+      const playerUrl = `${baseUrl}?mode=player`;
+
+      const qrInput = document.getElementById('qr-url-input');
+      if (qrInput) qrInput.value = playerUrl;
+
+      const qrContainer = document.getElementById('qrcode-canvas');
+      if (!qrContainer) return;
+      qrContainer.innerHTML = '';
+
+      let renderSuccess = false;
+
+      // Method 1: QRCode.js library
+      if (typeof QRCode !== 'undefined') {
+        try {
+          if (typeof QRCode === 'function') {
+            qrCodeInstance = new QRCode(qrContainer, {
+              text: playerUrl,
+              width: 200,
+              height: 200,
+              colorDark: "#0f172a",
+              colorLight: "#ffffff",
+              correctLevel: (QRCode.CorrectLevel && QRCode.CorrectLevel.M) ? QRCode.CorrectLevel.M : 0
+            });
+            renderSuccess = true;
+          } else if (typeof QRCode.toCanvas === 'function') {
+            const canvas = document.createElement('canvas');
+            QRCode.toCanvas(canvas, playerUrl, { width: 200, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } }, (err) => {
+              if (!err) {
+                qrContainer.appendChild(canvas);
+                renderSuccess = true;
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('QRCode JS library render warning:', e);
+        }
+      }
+
+      // Method 2: Dynamic Image API Fallback (Guarantees QR displays even if library/script is blocked)
+      const ensureQrVisible = () => {
+        const hasCanvas = qrContainer.querySelector('canvas');
+        const hasImg = qrContainer.querySelector('img');
+        if (!hasCanvas && (!hasImg || !hasImg.src)) {
+          qrContainer.innerHTML = '';
+          const encodedUrl = encodeURIComponent(playerUrl);
+          const img = document.createElement('img');
+          img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedUrl}&bgcolor=ffffff&color=0f172a&margin=1`;
+          img.alt = 'QR Kód pro hráče';
+          img.className = 'w-[200px] h-[200px] rounded-lg shadow-sm block mx-auto object-contain';
+          img.loading = 'eager';
+          img.onerror = function() {
+            this.onerror = null;
+            this.src = `https://quickchart.io/qr?text=${encodedUrl}&size=200`;
+          };
+          qrContainer.appendChild(img);
+        }
+      };
+
+      setTimeout(ensureQrVisible, 60);
+      setTimeout(ensureQrVisible, 350);
+    }
+
+    function downloadQrCode() {
+      const qrContainer = document.getElementById('qrcode-canvas');
+      if (!qrContainer) return;
+      const canvas = qrContainer.querySelector('canvas');
+      const img = qrContainer.querySelector('img');
+
+      if (canvas) {
+        try {
+          const link = document.createElement('a');
+          link.download = 'vitkovice-quest-qr.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          showToast('QR kód úspěšně stažen jako PNG!');
+          return;
+        } catch(e) {}
+      }
+
+      if (img && img.src) {
+        const link = document.createElement('a');
+        link.download = 'vitkovice-quest-qr.png';
+        link.href = img.src;
+        link.target = '_blank';
+        link.click();
+        showToast('Stahování QR kódu zahájeno!');
+      } else {
+        showToast('Generuji QR kód, zkuste za okamžik.');
+      }
+    }
+
+    function openPlayerUrl() {
+      const qrInput = document.getElementById('qr-url-input');
+      const url = qrInput ? qrInput.value : `${window.location.href.split('?')[0].split('#')[0]}?mode=player`;
+      window.open(url, '_blank');
+    }
+
+    function copyPlayerUrl() {
+      const qrInput = document.getElementById('qr-url-input');
+      if (qrInput) {
+        qrInput.select();
+        navigator.clipboard.writeText(qrInput.value).then(() => {
+          showToast('Odkaz pro hráče zkopírován do schránky!');
+        }).catch(() => {
+          document.execCommand('copy');
+          showToast('Odkaz zkopírován!');
+        });
+      }
+    }
+
+    function refreshLeaderboard(showNotification = false) {
+      // If manual refresh requested and Firestore available, fetch fresh collection snapshot
+      if (showNotification && window.QuestFirebase) {
+        window.QuestFirebase.getAllTeamsFromFirestore().then(fresh => {
+          if (fresh && fresh.length > 0) {
+            localStorage.setItem(STORAGE_KEY_TEAMS, JSON.stringify(fresh));
+          }
+          refreshLeaderboard(false);
+          showToast('Výsledková tabulka aktualizována z cloudu');
+        }).catch(err => {
+          console.warn('Manual fetch error:', err);
+        });
+      }
+
+      const teams = getAllTeams();
+      const tbody = document.getElementById('leaderboard-tbody');
+      const emptyState = document.getElementById('table-empty-state');
+      
+      // Update statistics
+      const totalTeams = teams.length;
+      const completedTeams = teams.filter(t => t.currentStep > getTotalTasks(t)).length;
+      const totalScoreSum = teams.reduce((acc, t) => acc + (t.score || 0), 0);
+      const avgScore = totalTeams > 0 ? Math.round(totalScoreSum / totalTeams) : 0;
+      
+      let totalPhotos = 0;
+      teams.forEach(t => {
+        if (t.photos) {
+          totalPhotos += Object.keys(t.photos).length;
+        }
+      });
+
+      document.getElementById('stat-total-teams').textContent = totalTeams;
+      document.getElementById('stat-completed-teams').textContent = completedTeams;
+      const completedSubtitle = document.getElementById('stat-completed-subtitle');
+      if (completedSubtitle) completedSubtitle.textContent = `splněno ${TASKS.length}/${TASKS.length}`;
+      document.getElementById('stat-avg-score').textContent = `${avgScore} b`;
+      document.getElementById('stat-total-photos').textContent = totalPhotos;
+
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (teams.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+
+        // Sort by score desc, then by currentStep desc
+        const sortedTeams = [...teams].sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return b.currentStep - a.currentStep;
+        });
+
+        sortedTeams.forEach((team, idx) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-industrial-850/60 transition';
+
+          const totalTasksCount = getTotalTasks(team);
+          const isDone = team.currentStep > totalTasksCount;
+          
+          let stepText = '';
+          if (isDone) {
+            stepText = '10 / 10 + bonusy (Cíl)';
+          } else if (team.currentStep === 1) {
+            stepText = 'Úvodní výzva (Rarita)';
+          } else if (team.currentStep <= 11) {
+            stepText = `${team.currentStep - 1} / 10 stanovišť`;
+          } else {
+            stepText = 'Bonusový úkol';
+          }
+
+          const progressPercent = Math.min(100, Math.round(((team.currentStep - 1) / totalTasksCount) * 100));
+
+          // Generate photo thumbnails
+          let photosHtml = '<span class="text-xs text-slate-500">Žádné foto</span>';
+          if (team.photos && Object.keys(team.photos).length > 0) {
+            photosHtml = '<div class="flex items-center gap-1.5 flex-wrap">';
+            Object.entries(team.photos).forEach(([stepNum, photoData]) => {
+              const photoSrc = typeof photoData === 'string' ? photoData : photoData.base64;
+              const photoTaskInfo = getTaskStepDisplayInfo(team, parseInt(stepNum) - 1);
+              const photoTitle = photoTaskInfo.stepTitleText || `Stanoviště ${stepNum}`;
+              photosHtml += `
+                <button 
+                  onclick="openPhotoModal('${photoSrc}', '${escapeHtml(team.roomName)}', '${escapeHtml(photoTitle)}')" 
+                  title="${escapeHtml(photoTitle)} - Klikněte pro zvětšení"
+                  class="w-8 h-8 rounded-lg overflow-hidden border border-orange-500/50 hover:border-orange-400 hover:scale-110 transition shadow cursor-pointer bg-industrial-950 flex-shrink-0"
+                >
+                  <img src="${photoSrc}" alt="${escapeHtml(photoTitle)}" class="w-full h-full object-cover" />
+                </button>
+              `;
+            });
+            photosHtml += '</div>';
+          }
+
+          // Duration calculation
+          const durationStr = formatTeamDuration(team.startTime, team.endTime);
+
+          tr.innerHTML = `
+            <td class="py-3.5 px-4">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-industrial-800 text-slate-300 font-bold text-xs flex items-center justify-center">${idx + 1}</span>
+                <div>
+                  <div class="font-bold text-white text-sm flex items-center gap-2">
+                    ${escapeHtml(team.roomName)}
+                    ${isDone ? '<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-950 text-emerald-400 border border-emerald-700">CÍL</span>' : ''}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3.5 px-4">
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-semibold">
+                  <span class="${isDone ? 'text-emerald-400 font-bold' : 'text-orange-400'}">${stepText}</span>
+                  <span class="text-slate-500 text-[11px]">${progressPercent}%</span>
+                </div>
+                <div class="w-28 bg-industrial-950 rounded-full h-1.5 overflow-hidden">
+                  <div class="${isDone ? 'bg-emerald-500' : 'bg-orange-500'} h-1.5 rounded-full" style="width: ${progressPercent}%"></div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3.5 px-4 text-center">
+              <span class="font-extrabold text-amber-300 bg-amber-950/40 border border-amber-800/40 px-2.5 py-1 rounded-lg text-xs">
+                ${team.score || 0} b
+              </span>
+            </td>
+            <td class="py-3.5 px-4 text-xs text-slate-400">
+              <div><i class="fa-regular fa-clock mr-1 text-slate-500"></i> ${team.startTimeFormatted || '--:--'}</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">Doba: ${durationStr}</div>
+            </td>
+            <td class="py-3.5 px-4">
+              ${photosHtml}
+            </td>
+            <td class="py-3.5 px-4 text-right">
+              <button onclick="deleteSingleTeam('${team.id}')" title="Smazat tento tým" class="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-950/30 transition text-xs">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      if (showNotification) {
+        showToast('Výsledková tabulka aktualizována');
+      }
+    }
+
+    function filterLeaderboard() {
+      const term = (document.getElementById('table-search-input')?.value || '').toLowerCase().trim();
+      const rows = document.querySelectorAll('#leaderboard-tbody tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(term) ? '' : 'none';
+      });
+    }
+
+    function deleteSingleTeam(teamId) {
+      if (confirm('Opravdu chcete smazat tento pokoj z výsledků?')) {
+        let teams = getAllTeams();
+        teams = teams.filter(t => t.id !== teamId);
+        saveAllTeams(teams);
+        if (localStorage.getItem(STORAGE_KEY_ACTIVE_TEAM_ID) === teamId) {
+          localStorage.removeItem(STORAGE_KEY_ACTIVE_TEAM_ID);
+        }
+        if (window.QuestFirebase) {
+          window.QuestFirebase.deleteTeamFromFirestore(teamId).catch(e => console.warn('Firestore delete note:', e));
+        }
+        refreshLeaderboard();
+        showToast('Záznam pokoje byl smazán.');
+      }
+    }
+
+    function confirmResetAllData() {
+      document.getElementById('confirm-reset-modal').classList.remove('hidden');
+      document.getElementById('confirm-reset-modal').classList.add('flex');
+    }
+
+    function closeResetModal() {
+      document.getElementById('confirm-reset-modal').classList.add('hidden');
+      document.getElementById('confirm-reset-modal').classList.remove('flex');
+    }
+
+    function executeResetAllData() {
+      const teams = getAllTeams();
+      localStorage.removeItem(STORAGE_KEY_TEAMS);
+      localStorage.removeItem(STORAGE_KEY_ACTIVE_TEAM_ID);
+      
+      if (window.QuestFirebase && teams.length > 0) {
+        teams.forEach(t => {
+          if (t.id) window.QuestFirebase.deleteTeamFromFirestore(t.id).catch(() => {});
+        });
+      }
+
+      closeResetModal();
+      refreshLeaderboard();
+      showToast('Všechna herní data byla úspěšně resetována.');
+    }
+
+    function exportToCsv() {
+      const teams = getAllTeams();
+      if (teams.length === 0) {
+        showToast('Zatím nejsou k dispozici žádná data k exportu.');
+        return;
+      }
+
+      let csv = 'Pořadí;Název pokoje / Tým;Aktuální stanoviště;Celkové body;Čas startu;Čas konce;Celkový čas;Počet fotek\n';
+      
+      teams.forEach((t, i) => {
+        const duration = formatTeamDuration(t.startTime, t.endTime);
+        const photoCount = t.photos ? Object.keys(t.photos).length : 0;
+        const totalCount = getTotalTasks(t);
+        csv += `${i + 1};"${t.roomName}";"${t.currentStep > totalCount ? 'DOKONČENO (' + totalCount + '/' + totalCount + ')' : t.currentStep + '/' + totalCount}";${t.score || 0};"${t.startTimeFormatted || ''}";"${t.endTimeFormatted || ''}";"${duration}";${photoCount}\n`;
+      });
+
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vitkovice_quest_vysledky_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Výsledky uloženy do souboru CSV!');
+    }
+
+    /**
+     * ==========================================
+     * 2. REGISTRACE TÝMU LOGIC
+     * ==========================================
+     */
+    function checkResumeBanner() {
+      const activeTeam = getActiveTeam();
+      const banner = document.getElementById('resume-team-banner');
+      const nameEl = document.getElementById('resume-team-name');
+      
+      if (activeTeam) {
+        banner.classList.remove('hidden');
+        const totalCount = getTotalTasks(activeTeam);
+        nameEl.textContent = `${activeTeam.roomName} (Stanoviště ${Math.min(activeTeam.currentStep, totalCount)}/${totalCount}, ${activeTeam.score} b)`;
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function selectRoomPreset(presetName) {
+      const input = document.getElementById('team-name-input');
+      if (input) {
+        input.value = presetName;
+        input.focus();
+      }
+    }
+
+    function handleTeamRegistration(e) {
+      e.preventDefault();
+      const input = document.getElementById('team-name-input');
+      const rawName = input.value.trim();
+      if (!rawName) return;
+
+      const existingTeams = getAllTeams();
+      const existing = existingTeams.find(t => t.roomName && t.roomName.trim().toLowerCase() === rawName.toLowerCase());
+      if (existing) {
+        const total = getTotalTasks(existing);
+        const proceed = confirm(`Pokoj "${existing.roomName}" již má rozehranou hru:\n- Stanoviště ${Math.min(existing.currentStep, total)} z ${total}\n- Získané body: ${existing.score} b\n\nChcete pokračovat v této rozehrané hře?\n\n• [OK] = Pokračovat v rozehrané hře\n• [Storno] = Začít novou hru od začátku`);
+        if (proceed) {
+          setActiveTeamId(existing.id);
+          input.value = '';
+          showToast(`Pokračujete ve hře pokoje ${existing.roomName}`);
+          switchView(existing.currentStep > total ? 'congrats' : 'game');
+          return;
+        }
+      }
+
+      const now = new Date();
+      const teamId = 'team_' + Date.now();
+      const newTeam = {
+        id: teamId,
+        roomName: rawName,
+        currentStep: 1,
+        score: 0,
+        startTime: now.getTime(),
+        startTimeFormatted: now.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
+        endTime: null,
+        endTimeFormatted: null,
+        photos: {},
+        stepAnswers: {},
+        tasks: generateShuffledTasksForTeam(),
+        lastUpdated: Date.now()
+      };
+
+      const teams = getAllTeams();
+      teams.push(newTeam);
+      saveAllTeams(teams);
+      setActiveTeamId(teamId);
+
+      // Create isolated Firestore document for this room
+      if (window.QuestFirebase) {
+        window.QuestFirebase.saveTeamToFirestore(newTeam).catch(err => {
+          console.warn('Firestore initial registration write error:', err);
+        });
+      }
+
+      input.value = '';
+      showToast(`Tým ${rawName} úspěšně zaregistrován!`);
+      switchView('game');
+    }
+
+    function resumeActiveTeam() {
+      const activeTeam = getActiveTeam();
+      if (activeTeam) {
+        if (activeTeam.currentStep > getTotalTasks(activeTeam)) {
+          switchView('congrats');
+        } else {
+          switchView('game');
+        }
+      }
+    }
+
+    function logoutTeamAndRegisterNew() {
+      localStorage.removeItem(STORAGE_KEY_ACTIVE_TEAM_ID);
+      switchView('registration');
+    }
+
+    /**
+     * ==========================================
+     * 3. HRA & STANOVIŠTĚ ENGINE
+     * ==========================================
+     */
+    let taskCountdownTimer = null;
+
+    function renderCurrentTask() {
+      const activeTeam = getActiveTeam();
+      if (!activeTeam) {
+        switchView('registration');
+        return;
+      }
+
+      const totalTasks = getTotalTasks(activeTeam);
+      if (activeTeam.currentStep > totalTasks) {
+        switchView('congrats');
+        return;
+      }
+
+      // Check if there is an active 3-minute nature pause lock
+      if (activeTeam.outcomeLockUntil && Date.now() < activeTeam.outcomeLockUntil) {
+        renderNatureBreakScreen(activeTeam, totalTasks);
+        return;
+      }
+
+      const taskIndex = activeTeam.currentStep - 1;
+      const task = getTaskForTeam(activeTeam, taskIndex);
+      if (!task) return;
+
+      const stepInfo = getTaskStepDisplayInfo(activeTeam, taskIndex);
+
+      // Clear any running countdown timer from previous steps
+      if (taskCountdownTimer) {
+        clearInterval(taskCountdownTimer);
+        taskCountdownTimer = null;
+      }
+      stopAnyActiveSpeechRecognition();
+
+      // Update top status bar
+      document.getElementById('game-team-name').textContent = activeTeam.roomName;
+      document.getElementById('game-team-score').textContent = `${activeTeam.score || 0} b`;
+      document.getElementById('game-step-counter').textContent = stepInfo.counterText;
+
+      // Render progress stepper with 10 main tasks + 2 bonus challenges
+      renderStepper(activeTeam.currentStep);
+
+      // Render Task details
+      const badgeStepEl = document.getElementById('task-badge-step');
+      badgeStepEl.textContent = stepInfo.badgeText;
+      badgeStepEl.className = `px-3 py-1 rounded-xl text-xs sm:text-sm uppercase tracking-wide font-extrabold ${stepInfo.badgeClass}`;
+
+      document.getElementById('task-points-val').textContent = task.points > 0 ? `+${task.points} bodů` : `Bez bodů (prozatím)`;
+      document.getElementById('task-title').textContent = task.title;
+      document.getElementById('task-desc').innerHTML = task.desc;
+
+      // Reset feedback and variables
+      hideFeedback();
+      selectedQuizOption = null;
+      uploadedPhotoBase64 = null;
+      isHintVisible = false;
+
+      // Hint button handling
+      const hintContainer = document.getElementById('task-hint-container');
+      const hintBtnText = document.getElementById('hint-btn-text');
+      if (task.hint) {
+        hintContainer.classList.remove('hidden');
+        hintBtnText.textContent = 'Zobrazit nápovědu';
+      } else {
+        hintContainer.classList.add('hidden');
+      }
+
+      // Render interactive form elements based on task type
+      const container = document.getElementById('task-interactive-container');
+      container.innerHTML = '';
+
+      if (task.type === 'quiz') {
+        renderQuizTask(task, container);
+      } else if (task.type === 'code') {
+        renderCodeTask(task, container);
+      } else if (task.type === 'photo') {
+        renderPhotoTask(task, container);
+      } else if (task.type === 'text') {
+        renderTextTask(task, container);
+      } else if (task.type === 'interview') {
+        renderInterviewTask(task, container);
+      } else if (task.type === 'leader-confirm') {
+        renderLeaderConfirmTask(task, container);
+      } else if (task.type === 'number') {
+        renderNumberTask(task, container);
+      }
+    }
+
+    function renderStepper(currentStep) {
+      const stepper = document.getElementById('quest-stepper');
+      if (!stepper) return;
+      stepper.innerHTML = '';
+
+      const activeTeam = getActiveTeam();
+      const taskList = (activeTeam && Array.isArray(activeTeam.tasks)) ? activeTeam.tasks : TASKS;
+      const totalMainStations = taskList.filter(t => !t.alwaysFirst && !t.alwaysLast).length || 9;
+
+      // The progress bar tracks strictly the main numbered stations
+      // currentStep: 1 = Úvodní výzva (0 active), 2..(totalMainStations+1) = Stanoviště 1..N
+      const activeStation = currentStep - 1;
+
+      for (let stationNum = 1; stationNum <= totalMainStations; stationNum++) {
+        const isCompleted = activeStation > stationNum;
+        const isCurrent = activeStation === stationNum;
+
+        const node = document.createElement('div');
+        node.className = 'flex items-center flex-1 last:flex-none min-w-0';
+
+        const circle = document.createElement('div');
+        circle.title = `Stanoviště ${stationNum}`;
+        circle.className = `w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] xs:text-xs font-black flex-shrink-0 transition ${
+          isCompleted 
+            ? 'bg-emerald-600 text-white font-bold' 
+            : isCurrent 
+            ? 'bg-orange-600 text-white ring-2 xs:ring-4 ring-orange-500/40 font-extrabold scale-105 shadow-md' 
+            : 'bg-industrial-800 text-slate-500 font-semibold'
+        }`;
+        
+        if (isCompleted) {
+          circle.innerHTML = '<i class="fa-solid fa-check text-[9px] xs:text-[10px]"></i>';
+        } else {
+          circle.textContent = stationNum;
+        }
+
+        node.appendChild(circle);
+
+        if (stationNum < totalMainStations) {
+          const line = document.createElement('div');
+          line.className = `h-0.5 sm:h-1 flex-1 min-w-[2px] max-w-[14px] sm:max-w-[20px] ${isCompleted ? 'bg-emerald-600' : 'bg-industrial-800'}`;
+          node.appendChild(line);
+        }
+
+        stepper.appendChild(node);
+      }
+    }
+
+    function renderQuizTask(task, container) {
+      const grid = document.createElement('div');
+      grid.className = 'grid grid-cols-1 gap-2 sm:gap-3 w-full';
+
+      task.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = `quiz-opt-${opt.id}`;
+        btn.className = 'quiz-option-btn w-full p-3 sm:p-4 rounded-xl text-left bg-industrial-900 hover:bg-industrial-850 active:scale-[0.99] border-2 border-industrial-700 hover:border-orange-500/60 transition-all flex items-start gap-2.5 sm:gap-3 text-slate-200 shadow-sm cursor-pointer min-w-0';
+        btn.onclick = () => handleQuizOptionClick(opt.id, task);
+
+        btn.innerHTML = `
+          <span id="quiz-badge-${opt.id}" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-industrial-800 border border-industrial-700 flex items-center justify-center font-black text-xs sm:text-sm text-orange-400 flex-shrink-0 transition-colors">
+            ${opt.id}
+          </span>
+          <span class="text-xs sm:text-sm font-medium leading-snug pt-0.5 sm:pt-1 min-w-0 flex-1 break-words">${escapeHtml(opt.text)}</span>
+        `;
+
+        grid.appendChild(btn);
+      });
+
+      container.appendChild(grid);
+    }
+
+    function handleQuizOptionClick(optId, task) {
+      const activeTeam = getActiveTeam();
+      if (!activeTeam) return;
+
+      const allBtns = document.querySelectorAll('.quiz-option-btn');
+      allBtns.forEach(b => b.disabled = true);
+
+      const selectedBtn = document.getElementById(`quiz-opt-${optId}`);
+      const selectedBadge = document.getElementById(`quiz-badge-${optId}`);
+
+      const isCorrect = (optId === task.correctAnswer);
+
+      if (isCorrect) {
+        if (selectedBtn && selectedBadge) {
+          selectedBtn.className = 'quiz-option-btn w-full p-3 sm:p-4 rounded-xl text-left bg-emerald-950/80 border-2 border-emerald-500 ring-2 ring-emerald-400/50 transition-all flex items-start gap-2.5 sm:gap-3 text-white shadow-lg min-w-0';
+          selectedBadge.className = 'w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-xs sm:text-sm flex-shrink-0';
+          selectedBadge.innerHTML = '<i class="fa-solid fa-check"></i>';
+        }
+      } else {
+        // Highlight chosen as incorrect
+        if (selectedBtn && selectedBadge) {
+          selectedBtn.className = 'quiz-option-btn w-full p-3 sm:p-4 rounded-xl text-left bg-red-950/70 border-2 border-red-500 text-red-100 transition-all flex items-start gap-2.5 sm:gap-3 shadow-md min-w-0';
+          selectedBadge.className = 'w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-red-800 border border-red-600 text-white flex items-center justify-center font-black text-xs sm:text-sm flex-shrink-0';
+          selectedBadge.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        }
+
+        // Highlight the correct one so students see the right answer
+        const correctBtn = document.getElementById(`quiz-opt-${task.correctAnswer}`);
+        const correctBadge = document.getElementById(`quiz-badge-${task.correctAnswer}`);
+        if (correctBtn && correctBadge) {
+          correctBtn.className = 'quiz-option-btn w-full p-3 sm:p-4 rounded-xl text-left bg-emerald-950/40 border-2 border-emerald-500/70 text-emerald-200 transition-all flex items-start gap-2.5 sm:gap-3 opacity-90 min-w-0';
+          correctBadge.className = 'w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs sm:text-sm flex-shrink-0';
+          correctBadge.innerHTML = '<i class="fa-solid fa-check"></i>';
+        }
+      }
+
+      hideFeedback();
+      setTimeout(() => {
+        handleTaskOutcome(activeTeam, task, optId, isCorrect);
+      }, 450);
+    }
+
+    function renderCodeTask(task, container) {
+      container.innerHTML = `
+        <div class="space-y-3 w-full">
+          <label for="task-code-input" class="block text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300">
+            <i class="fa-solid fa-key text-orange-400 mr-1"></i> Zadejte kód ze stanoviště:
+          </label>
+          <div class="flex flex-col sm:flex-row gap-2.5 w-full">
+            <input 
+              type="text" 
+              id="task-code-input" 
+              required 
+              placeholder="${task.placeholder}" 
+              class="w-full bg-industrial-950 border-2 border-industrial-700 focus:border-orange-500 text-white text-base sm:text-lg rounded-xl px-4 py-3 sm:py-3.5 focus:outline-none uppercase font-mono tracking-widest text-center sm:text-left"
+              autocomplete="off"
+            />
+            <button type="submit" class="w-full sm:w-auto px-6 py-3 sm:py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-orange-950/50 transition flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer">
+              <span>Odeslat</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPhotoTask(task, container) {
+      const hasTimeLimit = Boolean(task.timeLimit);
+      let timerHeaderHtml = '';
+
+      if (hasTimeLimit) {
+        timerHeaderHtml = `
+          <div id="photo-task-timer-banner" class="flex items-center justify-between bg-amber-950/70 border border-amber-500/60 px-3.5 py-2 rounded-xl mb-3">
+            <div class="flex items-center gap-2 text-xs font-black text-amber-300">
+              <i class="fa-solid fa-stopwatch text-amber-400 text-sm animate-pulse"></i>
+              <span>Zbývající čas na vyfocení:</span>
+            </div>
+            <div id="photo-task-timer-display" class="font-mono text-base font-black text-amber-300 bg-industrial-950 px-2.5 py-0.5 rounded-lg border border-amber-500/40">
+              01:00
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="space-y-3 w-full">
+          ${timerHeaderHtml}
+          <div class="border-2 border-dashed border-industrial-700 hover:border-orange-500 rounded-2xl p-4 sm:p-6 text-center transition bg-industrial-900/60 w-full overflow-hidden">
+            
+            <div id="photo-upload-placeholder">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-industrial-800 text-orange-400 text-xl sm:text-2xl flex items-center justify-center mx-auto mb-2">
+                <i class="fa-solid fa-camera"></i>
+              </div>
+              <p class="text-xs sm:text-sm font-bold text-white mb-1">Vyfoťte fotoaparátem v mobilu</p>
+              <p class="text-[11px] sm:text-xs text-slate-400 mb-3.5">Po vyfocení se snímek uloží a přejdete na další úkol.</p>
+              
+              <label for="task-photo-input" class="cursor-pointer inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-bold text-xs sm:text-sm shadow-lg transition max-w-full">
+                <i class="fa-solid fa-camera-retro"></i> Spustit fotoaparát / Vybrat foto
+              </label>
+              <input 
+                type="file" 
+                id="task-photo-input" 
+                accept="image/*" 
+                capture="environment" 
+                onchange="handlePhotoUpload(event)" 
+                class="hidden" 
+              />
+            </div>
+
+            <div id="photo-preview-container" class="hidden space-y-3 sm:space-y-4">
+              <div class="relative inline-block rounded-xl overflow-hidden border-2 border-emerald-500 shadow-xl max-h-56 sm:max-h-64 max-w-full">
+                <img id="photo-preview-img" src="" alt="Náhled fotky" class="max-h-56 sm:max-h-64 w-auto object-cover max-w-full mx-auto" />
+                <div class="absolute top-2 right-2 bg-emerald-950/90 text-emerald-400 text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold border border-emerald-500 flex items-center gap-1 shadow">
+                  <i class="fa-solid fa-check"></i> Fotka uložena
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
+                <label for="task-photo-input" class="w-full sm:w-auto cursor-pointer px-4 py-3 rounded-xl bg-industrial-800 hover:bg-industrial-700 active:bg-industrial-900 text-slate-300 text-xs sm:text-sm font-bold transition border border-industrial-700 flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-arrows-rotate"></i> Vyfotit znovu
+                </label>
+                <button 
+                  type="button" 
+                  onclick="triggerPhotoTaskOutcome()" 
+                  class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-950/50 transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Odeslat fotku a pokračovat</span>
+                  <i class="fa-solid fa-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `;
+
+      if (hasTimeLimit) {
+        let remainingSeconds = task.timeLimit || 60;
+        const timerDisplay = document.getElementById('photo-task-timer-display');
+        const timerBanner = document.getElementById('photo-task-timer-banner');
+
+        taskCountdownTimer = setInterval(() => {
+          remainingSeconds--;
+          if (remainingSeconds <= 0) {
+            clearInterval(taskCountdownTimer);
+            taskCountdownTimer = null;
+            if (timerDisplay) {
+              timerDisplay.textContent = '00:00';
+              timerDisplay.className = 'font-mono text-base font-black text-red-400 bg-red-950 px-2.5 py-0.5 rounded-lg border border-red-500';
+            }
+            if (timerBanner) {
+              timerBanner.className = 'flex items-center justify-between bg-red-950/80 border border-red-500 px-3.5 py-2 rounded-xl mb-3 animate-pulse';
+            }
+          } else {
+            const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+            const secs = String(remainingSeconds % 60).padStart(2, '0');
+            if (timerDisplay) {
+              timerDisplay.textContent = `${mins}:${secs}`;
+              if (remainingSeconds <= 15) {
+                timerDisplay.className = 'font-mono text-base font-black text-red-400 bg-red-950 px-2.5 py-0.5 rounded-lg border border-red-500/60 animate-pulse';
+              }
+            }
+          }
+        }, 1000);
+      }
+    }
+
+    function triggerPhotoTaskOutcome() {
+      const activeTeam = getActiveTeam();
+      if (!activeTeam) return;
+      const task = getTaskForTeam(activeTeam, activeTeam.currentStep - 1);
+      if (task) {
+        handleTaskOutcome(activeTeam, task, 'photo_uploaded', true);
+      }
+    }
+
+    function handlePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const placeholder = document.getElementById('photo-upload-placeholder');
+      const previewContainer = document.getElementById('photo-preview-container');
+      const previewImg = document.getElementById('photo-preview-img');
+
+      // Compress image client-side before Base64 saving so localStorage is never exhausted
+      compressImage(file, 800, 0.7, (compressedBase64) => {
+        uploadedPhotoBase64 = compressedBase64;
+        
+        if (previewContainer && placeholder && previewImg) {
+          previewImg.src = compressedBase64;
+          placeholder.classList.add('hidden');
+          previewContainer.classList.remove('hidden');
+        }
+        // Image is displayed with confirmation. Students manually press "Odeslat fotku a pokračovat" button.
+      });
+    }
+
+    function compressImage(file, maxWidth, quality, callback) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+          callback(compressedBase64);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderTextTask(task, container) {
+      container.innerHTML = `
+        <div class="space-y-3 w-full">
+          <label for="task-text-input" class="block text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300">
+            <i class="fa-solid fa-pen-nib text-orange-400 mr-1"></i> Vaše odpověď:
+          </label>
+          <div class="flex flex-col sm:flex-row gap-2.5 w-full">
+            <input 
+              type="text" 
+              id="task-text-input" 
+              required 
+              placeholder="${task.placeholder}" 
+              class="w-full bg-industrial-950 border-2 border-industrial-700 focus:border-orange-500 text-white text-base rounded-xl px-4 py-3 sm:py-3.5 focus:outline-none font-semibold"
+              autocomplete="off"
+            />
+            <button type="submit" class="w-full sm:w-auto px-6 py-3 sm:py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-orange-950/50 transition flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer">
+              <span>Odeslat</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderNumberTask(task, container) {
+      container.innerHTML = `
+        <div class="space-y-3 w-full">
+          <label for="task-number-input" class="block text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300">
+            <i class="fa-solid fa-arrow-up-9-1 text-orange-400 mr-1"></i> Zadejte výšku v metrech:
+          </label>
+          <div class="flex flex-col sm:flex-row gap-2.5 w-full">
+            <input 
+              type="number" 
+              id="task-number-input" 
+              required 
+              placeholder="${task.placeholder}" 
+              class="w-full bg-industrial-950 border-2 border-industrial-700 focus:border-orange-500 text-white text-base sm:text-lg rounded-xl px-4 py-3 sm:py-3.5 focus:outline-none font-mono text-center sm:text-left"
+              autocomplete="off"
+            />
+            <button type="submit" class="w-full sm:w-auto px-6 py-3 sm:py-3.5 rounded-xl bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-orange-950/50 transition flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer">
+              <span>Odeslat</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    /**
+     * Speech Recognition (Voice-to-text AI transcription) Engine
+     */
+    let currentSpeechRecognition = null;
+    let activeMicBtnId = null;
+    let activeStatusId = null;
+
+    function stopAnyActiveSpeechRecognition() {
+      if (currentSpeechRecognition) {
+        try {
+          currentSpeechRecognition.stop();
+        } catch(e) {}
+        currentSpeechRecognition = null;
+      }
+      if (activeStatusId) {
+        const prevStatus = document.getElementById(activeStatusId);
+        if (prevStatus) prevStatus.classList.add('hidden');
+        activeStatusId = null;
+      }
+      if (activeMicBtnId) {
+        const prevBtn = document.getElementById(activeMicBtnId);
+        if (prevBtn) {
+          prevBtn.classList.remove('bg-red-600', 'text-white', 'border-red-500', 'animate-pulse');
+          prevBtn.classList.add('bg-industrial-800', 'text-slate-200');
+          const label = prevBtn.querySelector('.mic-label');
+          if (label) label.textContent = 'Diktovat hlasem';
+          const icon = prevBtn.querySelector('i');
+          if (icon) icon.className = 'fa-solid fa-microphone text-orange-400';
+        }
+        activeMicBtnId = null;
+      }
+    }
+
+    function toggleSpeechRecognition(inputId, statusId, btnId) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const statusElem = document.getElementById(statusId);
+      const btnElem = document.getElementById(btnId);
+      const inputElem = document.getElementById(inputId);
+
+      // If already active on this button, stop it
+      if (currentSpeechRecognition && activeMicBtnId === btnId) {
+        stopAnyActiveSpeechRecognition();
+        return;
+      }
+
+      // Stop any other running recognition
+      stopAnyActiveSpeechRecognition();
+
+      if (!SpeechRecognition) {
+        showToast('Váš prohlížeč nepodporuje přímé nahrávání hlasu. Zkuste prosím otevřít aplikaci v Google Chrome nebo Safari.');
+        return;
+      }
+
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'cs-CZ';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        let baseInitialText = inputElem ? inputElem.value.trim() : '';
+
+        recognition.onstart = function() {
+          activeMicBtnId = btnId;
+          activeStatusId = statusId;
+          if (statusElem) statusElem.classList.remove('hidden');
+          if (btnElem) {
+            btnElem.classList.remove('bg-orange-600', 'hover:bg-orange-500', 'text-white', 'border-orange-500');
+            btnElem.classList.add('bg-red-600', 'hover:bg-red-500', 'text-white', 'border-red-500', 'animate-pulse');
+            const label = btnElem.querySelector('.mic-label');
+            if (label) label.textContent = 'Zastavit nahrávání';
+            const icon = btnElem.querySelector('i');
+            if (icon) icon.className = 'fa-solid fa-stop text-white';
+          }
+        };
+
+        recognition.onresult = function(event) {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = 0; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript + ' ';
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+
+          const combinedSpoken = (finalTranscript + interimTranscript).trim();
+          if (inputElem) {
+            if (baseInitialText) {
+              inputElem.value = `${baseInitialText} ${combinedSpoken}`.trim();
+            } else {
+              inputElem.value = combinedSpoken;
+            }
+          }
+        };
+
+        recognition.onerror = function(event) {
+          console.warn('Speech recognition status/error:', event.error);
+          stopAnyActiveSpeechRecognition();
+          if (event.error === 'not-allowed') {
+            showToast('Povolte prosím v prohlížeči přístup k mikrofonu pro nahrání hlasu.');
+          }
+        };
+
+        recognition.onend = function() {
+          stopAnyActiveSpeechRecognition();
+        };
+
+        currentSpeechRecognition = recognition;
+        recognition.start();
+      } catch (err) {
+        console.error('Speech recognition start error:', err);
+        stopAnyActiveSpeechRecognition();
+        showToast('Nebylo možné spustit mikrofon.');
+      }
+    }
+
+    function renderInterviewTask(task, container) {
+      container.innerHTML = `
+        <div class="space-y-4 w-full text-left">
+          
+          <!-- Hlasové nahrávání výzvy -->
+          <div class="bg-industrial-900/90 border-2 border-industrial-700 focus-within:border-orange-500/80 rounded-2xl p-4 sm:p-5 space-y-3.5 transition shadow-sm text-center">
+            
+            <div class="flex flex-col items-center justify-center gap-2">
+              <span class="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-microphone-lines text-orange-400 text-sm"></i> Hlasový záznam (otázka i odpověď)
+              </span>
+              <p class="text-xs text-slate-300 max-w-sm">
+                Klikněte na tlačítko, nahrajte otázku i odpověď a poté nahrávání zastavte:
+              </p>
+            </div>
+
+            <!-- Velké nahrávací tlačítko -->
+            <div class="py-1 flex justify-center">
+              <button 
+                type="button" 
+                id="mic-btn-interview" 
+                onclick="toggleSpeechRecognition('interview-text-input', 'mic-status-interview', 'mic-btn-interview')"
+                class="px-5 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 active:scale-95 text-white border-2 border-orange-400/50 shadow-lg shadow-orange-950/60 text-sm font-black transition flex items-center gap-2.5 cursor-pointer"
+                title="Stiskněte a mluvte – nahraje se otázka i odpověď"
+              >
+                <i class="fa-solid fa-microphone text-base text-white"></i>
+                <span class="mic-label">Nahrát hlasem</span>
+              </button>
+            </div>
+            
+            <!-- Stav nahrávání / živá animace -->
+            <div id="mic-status-interview" class="hidden text-xs text-amber-400 font-bold flex items-center justify-center gap-2 py-1 bg-industrial-950/80 rounded-xl border border-amber-500/40">
+              <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+              <span>Probíhá nahrávání... Mluvte do mikrofonu!</span>
+            </div>
+
+            <!-- Zobrazení nahraného textu (readonly – nelze psát na klávesnici) -->
+            <div class="space-y-1.5 text-left pt-1">
+              <div class="text-[11px] font-bold text-slate-400 flex items-center justify-between">
+                <span>Nahraný hlasový přepis:</span>
+                <span class="text-[10px] text-slate-500 italic">Pouze hlasový záznam</span>
+              </div>
+              <textarea 
+                id="interview-text-input" 
+                rows="3"
+                readonly
+                tabindex="-1"
+                placeholder="Zde se automaticky zobrazí váš nahraný hlas po stisknutí tlačítka Nahrát hlasem..." 
+                class="w-full bg-industrial-950 border border-industrial-800 text-slate-200 text-xs sm:text-sm rounded-xl p-3.5 focus:outline-none font-medium resize-none cursor-default leading-relaxed select-none opacity-95"
+              ></textarea>
+            </div>
+
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-1">
+            <button 
+              type="submit" 
+              class="w-full py-3.5 px-5 sm:px-6 rounded-xl font-black text-xs sm:text-sm text-white bg-orange-600 hover:bg-orange-500 active:bg-orange-700 shadow-lg shadow-orange-950/50 transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Dokončit týmovou výzvu (+200 b)</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+
+        </div>
+      `;
+    }
+
+    function renderLeaderConfirmTask(task, container) {
+      container.innerHTML = `
+        <div class="space-y-4 w-full text-center">
+          
+          <div class="bg-industrial-950/90 border-2 border-industrial-700 rounded-2xl p-4 sm:p-5 space-y-3 shadow-md">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-600/20 border border-emerald-500/50 text-emerald-400 text-2xl flex items-center justify-center mx-auto shadow-inner">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+
+            <div class="space-y-1">
+              <h4 class="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider">Potvrzení od vedoucího</h4>
+              <p class="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-sm mx-auto">
+                Položte vedoucímu otázku, vyslechněte si odpověď a poté mu <strong class="text-white">předejte telefon</strong> k potvrzení:
+              </p>
+            </div>
+
+            <div class="p-3 bg-industrial-900/90 rounded-xl border border-industrial-800 text-xs text-amber-300 font-medium flex items-center justify-center gap-2">
+              <i class="fa-solid fa-hand-point-right text-amber-400 text-sm flex-shrink-0"></i>
+              <span>Pouze <strong>vedoucí kurzu</strong> posune jezdec doprava k potvrzení splnění.</span>
+            </div>
+          </div>
+
+          <!-- SWIPE TO CONFIRM SLIDER (Touch & Drag) -->
+          <div class="pt-2">
+            <div 
+              id="leader-swipe-track" 
+              class="relative w-full h-16 sm:h-18 bg-industrial-900 border-2 border-emerald-500/60 rounded-2xl overflow-hidden select-none shadow-xl flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ring-2 ring-emerald-950"
+            >
+              <!-- Background Fill Progress -->
+              <div 
+                id="leader-swipe-fill" 
+                class="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-500 w-0 pointer-events-none opacity-90"
+              ></div>
+
+              <!-- Shimmer animation overlay -->
+              <div class="absolute inset-0 swipe-shimmer pointer-events-none opacity-40"></div>
+
+              <!-- Track Guide Text -->
+              <div 
+                id="leader-swipe-text" 
+                class="relative z-10 text-xs sm:text-sm font-black text-slate-200 uppercase tracking-wider flex items-center justify-center gap-2 pointer-events-none transition-opacity px-4 text-center select-none"
+              >
+                <i class="fa-solid fa-angles-right text-emerald-400 animate-pulse text-sm"></i>
+                <span>Potáhněte pro potvrzení (+150 b)</span>
+              </div>
+
+              <!-- Draggable Knob / Handle -->
+              <div 
+                id="leader-swipe-knob" 
+                class="absolute left-1.5 top-1.5 bottom-1.5 w-14 sm:w-16 h-[calc(100%-12px)] bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg border border-emerald-200/50 cursor-grab active:cursor-grabbing z-20 select-none touch-none"
+              >
+                <i id="leader-swipe-icon" class="fa-solid fa-angles-right text-white"></i>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-center gap-1.5 mt-2.5 text-[11px] text-slate-400 font-medium">
+              <i class="fa-solid fa-shield-halved text-emerald-400 text-xs"></i>
+              <span>Posunutím doprava vedoucí potvrdí rozhovor</span>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      // Initialize the swipe drag logic
+      initLeaderSwipeSlider(task);
+    }
+
+    function initLeaderSwipeSlider(task) {
+      const track = document.getElementById('leader-swipe-track');
+      const knob = document.getElementById('leader-swipe-knob');
+      const fill = document.getElementById('leader-swipe-fill');
+      const text = document.getElementById('leader-swipe-text');
+      const icon = document.getElementById('leader-swipe-icon');
+      if (!track || !knob || !fill || !text) return;
+
+      let isDragging = false;
+      let startX = 0;
+      let currentTranslate = 0;
+      let isConfirmed = false;
+      let activePointerId = null;
+
+      function getMaxTranslate() {
+        return Math.max(0, track.offsetWidth - knob.offsetWidth - 12);
+      }
+
+      function handleStart(clientX, pointerId) {
+        if (isConfirmed) return;
+        isDragging = true;
+        startX = clientX;
+        currentTranslate = 0;
+        knob.style.transition = 'none';
+        fill.style.transition = 'none';
+        document.body.style.userSelect = 'none';
+
+        if (pointerId !== undefined && knob.setPointerCapture) {
+          activePointerId = pointerId;
+          try {
+            knob.setPointerCapture(pointerId);
+          } catch (err) {}
+        }
+      }
+
+      function handleMove(clientX, pointerId) {
+        if (!isDragging || isConfirmed) return;
+        if (activePointerId !== null && pointerId !== undefined && pointerId !== activePointerId) return;
+
+        const deltaX = clientX - startX;
+        const maxTranslate = getMaxTranslate();
+        currentTranslate = Math.max(0, Math.min(deltaX, maxTranslate));
+
+        knob.style.transform = `translateX(${currentTranslate}px)`;
+        fill.style.width = `${currentTranslate + (knob.offsetWidth / 2)}px`;
+
+        // Fade guide text as user swipes
+        const progress = maxTranslate > 0 ? (currentTranslate / maxTranslate) : 0;
+        text.style.opacity = String(Math.max(0.05, 1 - (progress * 1.35)));
+      }
+
+      function handleEnd(pointerId) {
+        if (!isDragging || isConfirmed) return;
+        if (activePointerId !== null && pointerId !== undefined && pointerId !== activePointerId) return;
+
+        isDragging = false;
+        document.body.style.userSelect = '';
+
+        if (activePointerId !== null && knob.releasePointerCapture) {
+          try {
+            knob.releasePointerCapture(activePointerId);
+          } catch (err) {}
+          activePointerId = null;
+        }
+
+        const maxTranslate = getMaxTranslate();
+
+        // Threshold: 70% swipe width triggers confirmation
+        if (maxTranslate > 0 && currentTranslate >= maxTranslate * 0.70) {
+          isConfirmed = true;
+          knob.style.transition = 'transform 0.2s ease-out, background 0.2s ease-out';
+          fill.style.transition = 'width 0.2s ease-out';
+          
+          knob.style.transform = `translateX(${maxTranslate}px)`;
+          fill.style.width = '100%';
+          knob.className = 'absolute left-1.5 top-1.5 bottom-1.5 w-14 sm:w-16 h-[calc(100%-12px)] bg-white rounded-xl flex items-center justify-center text-emerald-600 text-2xl shadow-xl z-20 select-none pointer-events-none';
+          
+          if (icon) {
+            icon.className = 'fa-solid fa-check text-emerald-600 text-2xl animate-bounce';
+          }
+          
+          text.style.opacity = '1';
+          text.innerHTML = '<span class="text-white font-black text-xs sm:text-sm tracking-wider uppercase flex items-center justify-center gap-1.5"><i class="fa-solid fa-circle-check text-white text-base"></i> Potvrzeno vedoucím!</span>';
+
+          try {
+            if (navigator.vibrate) navigator.vibrate([40, 30, 70]);
+          } catch (err) {}
+
+          setTimeout(() => {
+            const activeTeam = getActiveTeam();
+            if (activeTeam) {
+              handleTaskOutcome(activeTeam, task, 'confirmed_by_leader', true);
+            }
+          }, 350);
+        } else {
+          // Spring back smoothly
+          knob.style.transition = 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+          fill.style.transition = 'width 0.25s ease-out';
+          knob.style.transform = 'translateX(0px)';
+          fill.style.width = '0px';
+          text.style.opacity = '1';
+          currentTranslate = 0;
+        }
+      }
+
+      // Modern Pointer Events API
+      if (window.PointerEvent) {
+        knob.addEventListener('pointerdown', (e) => handleStart(e.clientX, e.pointerId));
+        track.addEventListener('pointerdown', (e) => handleStart(e.clientX, e.pointerId));
+        window.addEventListener('pointermove', (e) => handleMove(e.clientX, e.pointerId));
+        window.addEventListener('pointerup', (e) => handleEnd(e.pointerId));
+        window.addEventListener('pointercancel', (e) => handleEnd(e.pointerId));
+      } else {
+        // Touch fallback
+        knob.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) handleStart(e.touches[0].clientX);
+        }, { passive: true });
+        track.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) handleStart(e.touches[0].clientX);
+        }, { passive: true });
+        window.addEventListener('touchmove', (e) => {
+          if (e.touches.length > 0) handleMove(e.touches[0].clientX);
+        }, { passive: true });
+        window.addEventListener('touchend', () => handleEnd());
+        window.addEventListener('touchcancel', () => handleEnd());
+
+        // Mouse fallback
+        knob.addEventListener('mousedown', (e) => handleStart(e.clientX));
+        track.addEventListener('mousedown', (e) => handleStart(e.clientX));
+        window.addEventListener('mousemove', (e) => handleMove(e.clientX));
+        window.addEventListener('mouseup', () => handleEnd());
+      }
+    }
+
+    function toggleTaskHint() {
+      const activeTeam = getActiveTeam();
+      if (!activeTeam) return;
+      const task = getTaskForTeam(activeTeam, activeTeam.currentStep - 1);
+      if (!task || !task.hint) return;
+
+      isHintVisible = !isHintVisible;
+      const btnText = document.getElementById('hint-btn-text');
+      
+      if (isHintVisible) {
+        btnText.textContent = 'Skrýt nápovědu';
+        showFeedback(task.hint, 'info');
+      } else {
+        btnText.textContent = 'Zobrazit nápovědu';
+        hideFeedback();
+      }
+    }
+
+    /**
+     * Skip current task with 0 points
+     */
+    function skipCurrentTask() {
+      const activeTeam = getActiveTeam();
+      if (!activeTeam) return;
+
+      const taskIndex = activeTeam.currentStep - 1;
+      const task = getTaskForTeam(activeTeam, taskIndex);
+      if (!task) return;
+
+      stopAnyActiveSpeechRecognition();
+      hideFeedback();
+      handleTaskOutcome(activeTeam, task, 'Přeskočeno', false);
+    }
+
+    let outcomeTransitionTimer = null;
+    let pendingNextStepAction = null;
+
+    /**
+     * Submit & Verification Engine
+     */
+    function handleTaskSubmit(e) {
+      e.preventDefault();
+      const activeTeam = getActiveTeam();
+      if (!activeTeam) return;
+
+      const task = getTaskForTeam(activeTeam, activeTeam.currentStep - 1);
+      if (!task) return;
+
+      let isCorrect = false;
+      let userEnteredValue = null;
+
+      if (task.type === 'quiz') {
+        if (!selectedQuizOption) {
+          showFeedback('Vyberte prosím jednu z nabízených možností A, B, C nebo D.', 'error');
+          return;
+        }
+        userEnteredValue = selectedQuizOption;
+        isCorrect = (selectedQuizOption === task.correctAnswer);
+      } 
+      else if (task.type === 'code') {
+        const inputVal = (document.getElementById('task-code-input')?.value || '').trim().toUpperCase();
+        if (!inputVal) {
+          showFeedback('Zadejte kód ze stanoviště.', 'error');
+          return;
+        }
+        userEnteredValue = inputVal;
+        const validList = (task.validAnswers || [task.correctAnswer]).map(v => v.toUpperCase().trim());
+        isCorrect = validList.includes(inputVal) || (inputVal === task.correctAnswer.toUpperCase());
+      }
+      else if (task.type === 'photo') {
+        if (!uploadedPhotoBase64) {
+          showFeedback('Před pokračováním prosím nahrajte nebo pořiďte požadovanou fotografii.', 'error');
+          return;
+        }
+        userEnteredValue = 'photo_uploaded';
+        isCorrect = true;
+      }
+      else if (task.type === 'text') {
+        const inputVal = (document.getElementById('task-text-input')?.value || '').trim();
+        if (!inputVal) {
+          showFeedback('Zadejte vaši odpověď.', 'error');
+          return;
+        }
+        userEnteredValue = inputVal;
+        
+        // Normalize strings (remove accents & lowercase for relaxed robust matching)
+        const normalizeStr = (str) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+        const normInput = normalizeStr(inputVal);
+        const validList = (task.validAnswers || [task.correctAnswer]).map(normalizeStr);
+        isCorrect = validList.includes(normInput) || normInput === normalizeStr(task.correctAnswer);
+      }
+      else if (task.type === 'number') {
+        const inputVal = parseFloat(document.getElementById('task-number-input')?.value);
+        if (isNaN(inputVal)) {
+          showFeedback('Zadejte platné číslo v metrech.', 'error');
+          return;
+        }
+        userEnteredValue = inputVal;
+        isCorrect = (inputVal >= task.minRange && inputVal <= task.maxRange);
+      }
+      else if (task.type === 'interview') {
+        const textVal = (document.getElementById('interview-text-input')?.value || '').trim();
+        
+        if (!textVal) {
+          showFeedback('Před dokončením prosím nahrajte otázku i odpověď tlačítkem Nahrát hlasem.', 'error');
+          return;
+        }
+
+        userEnteredValue = textVal;
+        isCorrect = true; // Creative challenge completed
+      }
+      else if (task.type === 'leader-confirm') {
+        userEnteredValue = 'confirmed_by_leader';
+        isCorrect = true;
+      }
+
+      // Execute Outcome (Immediate progress without retry)
+      handleTaskOutcome(activeTeam, task, userEnteredValue, isCorrect);
+    }
+
+    function handleTaskOutcome(team, task, answerValue, isCorrect) {
+      if (outcomeTransitionTimer) {
+        clearTimeout(outcomeTransitionTimer);
+        outcomeTransitionTimer = null;
+      }
+
+      const pointsEarned = isCorrect ? task.points : 0;
+      const newScore = (team.score || 0) + pointsEarned;
+      const nextStep = team.currentStep + 1;
+
+      // Update photos dictionary if photo was taken
+      const updatedPhotos = { ...(team.photos || {}) };
+      if (task.type === 'photo' && uploadedPhotoBase64) {
+        updatedPhotos[team.currentStep] = uploadedPhotoBase64;
+      }
+
+      const updatedAnswers = { ...(team.stepAnswers || {}) };
+      updatedAnswers[team.currentStep] = {
+        taskId: task.id,
+        taskTitle: task.title,
+        answer: answerValue,
+        correct: isCorrect,
+        points: pointsEarned
+      };
+
+      const now = new Date();
+      const totalTasks = getTotalTasks(team);
+      const isIntroTask = !!task.alwaysFirst;
+      const stepInfo = getTaskStepDisplayInfo(team, team.currentStep - 1);
+      // Trigger 5-minute pause:
+      // 1. After intro challenge ("Pokojová rarita") -> preparation pause on room
+      // 2. Exactly after 3rd and 6th main tasks in order (Stanoviště 3 and Stanoviště 6) -> nature walk pause
+      const isNatureWalkBreak = !stepInfo.isIntro && !stepInfo.isBonus && (stepInfo.mainNumber === 3 || stepInfo.mainNumber === 6);
+      const isNatureBreak = isIntroTask || isNatureWalkBreak;
+      const pauseDuration = isNatureBreak ? NATURE_PAUSE_DURATION_MS : 0;
+      const lockUntil = (pauseDuration > 0) ? (now.getTime() + pauseDuration) : null;
+
+      let updatePayload = {
+        score: newScore,
+        currentStep: nextStep,
+        photos: updatedPhotos,
+        stepAnswers: updatedAnswers,
+        outcomeLockUntil: lockUntil
+      };
+
+      if (nextStep > totalTasks) {
+        updatePayload.endTime = now.getTime();
+        updatePayload.endTimeFormatted = now.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      updateActiveTeam(updatePayload);
+
+      // Setup Outcome Modal Elements
+      const modal = document.getElementById('task-outcome-modal');
+      const box = document.getElementById('task-outcome-box');
+      const iconContainer = document.getElementById('outcome-icon-container');
+      const icon = document.getElementById('outcome-icon');
+      const title = document.getElementById('outcome-title');
+      const points = document.getElementById('outcome-points');
+      const desc = document.getElementById('outcome-desc');
+      const continueBtn = document.getElementById('outcome-continue-btn');
+
+      if (isCorrect) {
+        if (stepInfo.isIntro) {
+          // SPECIAL INTRO TASK SUCCESS (Pokojová rarita) - Friendly positive Emerald styling
+          box.className = 'relative max-w-[340px] xs:max-w-sm sm:max-w-md w-full m-auto mx-auto my-auto bg-industrial-900 border-2 border-emerald-500/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-center shadow-2xl space-y-3 sm:space-y-4 transform transition-all duration-300 scale-100 opacity-100 ring-4 ring-emerald-500/20 max-h-[92vh] overflow-y-auto no-scrollbar';
+          iconContainer.className = 'w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 text-3xl sm:text-4xl flex items-center justify-center mx-auto shadow-lg';
+          icon.className = 'fa-solid fa-camera-retro';
+          title.textContent = 'Skvělé! Fotka je u mě.';
+          title.className = 'text-xl sm:text-2xl font-black text-white tracking-wide text-center';
+          points.textContent = '(Vyhodnotíme na konci)';
+          points.className = 'text-xs sm:text-sm font-bold text-emerald-400 text-center';
+          desc.innerHTML = `
+            <div class="p-3.5 sm:p-4 rounded-xl bg-industrial-950/70 border border-emerald-500/40 text-center mx-auto w-full">
+              <p class="text-xs sm:text-sm text-slate-200 leading-relaxed font-medium text-center">
+                Úvodní výzva <strong>Pokojová rarita</strong> je hotová. Další úkol na vás čeká venku. Připravte se na odchod, nezapomeňte se napít a vzít vhodnou obuv. Čeká nás zhruba 2 hodinová procházka.
+              </p>
+            </div>
+          `;
+        } else {
+          // STANDARD SUCCESS STATE (Large, Centered, Emerald)
+          box.className = 'relative max-w-[340px] xs:max-w-sm sm:max-w-md w-full m-auto mx-auto my-auto bg-industrial-900 border-2 border-emerald-500/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-center shadow-2xl space-y-3 sm:space-y-4 transform transition-all duration-300 scale-100 opacity-100 ring-4 ring-emerald-500/20 max-h-[92vh] overflow-y-auto no-scrollbar';
+          iconContainer.className = 'w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 text-3xl sm:text-4xl flex items-center justify-center mx-auto shadow-lg';
+          icon.className = 'fa-solid fa-star';
+          title.textContent = 'Výborně!';
+          title.className = 'text-2xl sm:text-3xl font-black text-white tracking-wide text-center';
+          if (task.points === 0) {
+            points.textContent = 'Fotografie odeslána (vyhodnocení proběhne na konci)';
+            points.className = 'text-sm sm:text-base font-bold text-amber-300 text-center';
+          } else {
+            points.textContent = `Získáváte +${pointsEarned} bodů`;
+            points.className = 'text-xl sm:text-2xl font-black text-emerald-400 text-center';
+          }
+          
+          const completedLabel = stepInfo.isBonus 
+            ? 'Bonusový úkol <strong>Seznamte se s vedoucími</strong> splněn!' 
+            : `Stanoviště <strong>${stepInfo.mainNumber}</strong> splněno!`;
+
+          if (task.explanation) {
+            desc.innerHTML = `
+              <div class="text-xs text-slate-300 text-center">${completedLabel} • Celkem: ${newScore} bodů</div>
+              <div class="mt-3 p-3 sm:p-3.5 bg-emerald-950/70 rounded-xl border border-emerald-500/50 text-left shadow-inner mx-auto w-full">
+                <div class="text-emerald-400 font-black text-xs mb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                  <i class="fa-solid fa-lightbulb text-amber-400"></i> Vysvětlení hádanky:
+                </div>
+                <p class="text-xs text-emerald-100 leading-relaxed font-semibold">
+                  ${task.explanation}
+                </p>
+              </div>
+            `;
+          } else {
+            desc.innerHTML = `<div class="text-center">${completedLabel}<br><span class="text-xs text-slate-400">Celkové skóre: ${newScore} bodů</span></div>`;
+          }
+        }
+
+        // Trigger Confetti
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 50,
+            spread: 70,
+            origin: { y: 0.7 },
+            colors: ['#10b981', '#f59e0b', '#ea580c']
+          });
+        }
+      } else {
+        // INCORRECT OR SKIPPED STATE
+        const isSkipped = (answerValue === 'Přeskočeno' || answerValue === 'skipped');
+
+        if (isSkipped) {
+          box.className = 'relative max-w-[340px] xs:max-w-sm sm:max-w-md w-full m-auto mx-auto my-auto bg-industrial-900 border-2 border-amber-500/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-center shadow-2xl space-y-3 sm:space-y-4 transform transition-all duration-300 scale-100 opacity-100 ring-4 ring-amber-500/20 max-h-[92vh] overflow-y-auto no-scrollbar';
+          iconContainer.className = 'w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-amber-950/80 border-2 border-amber-500 text-amber-400 text-3xl sm:text-4xl flex items-center justify-center mx-auto shadow-lg';
+          icon.className = 'fa-solid fa-forward-step';
+          title.textContent = 'Úkol byl přeskočen';
+          title.className = 'text-2xl sm:text-3xl font-black text-white tracking-wide text-center';
+          points.textContent = 'Získáváte 0 bodů';
+          points.className = 'text-xl sm:text-2xl font-black text-amber-400 text-center';
+        } else {
+          box.className = 'relative max-w-[340px] xs:max-w-sm sm:max-w-md w-full m-auto mx-auto my-auto bg-industrial-900 border-2 border-red-500/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-center shadow-2xl space-y-3 sm:space-y-4 transform transition-all duration-300 scale-100 opacity-100 ring-4 ring-red-500/20 max-h-[92vh] overflow-y-auto no-scrollbar';
+          iconContainer.className = 'w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-red-950/80 border-2 border-red-500 text-red-400 text-3xl sm:text-4xl flex items-center justify-center mx-auto shadow-lg';
+          icon.className = 'fa-solid fa-circle-xmark';
+          title.textContent = 'Bohužel špatně';
+          title.className = 'text-2xl sm:text-3xl font-black text-white tracking-wide text-center';
+          points.textContent = 'Získáváte 0 bodů';
+          points.className = 'text-xl sm:text-2xl font-black text-red-400 text-center';
+        }
+        
+        if (task.explanation) {
+          desc.innerHTML = `
+            <div class="text-xs text-slate-300 text-center">${isSkipped ? 'Úkol jste přeskočili bez bodového zisku.' : 'Žádná další šance pro toto stanoviště.'}</div>
+            <div class="mt-3 p-3 sm:p-3.5 ${isSkipped ? 'bg-industrial-950/90 border-amber-500/40' : 'bg-red-950/60 border-red-500/50'} rounded-xl border text-left shadow-inner mx-auto w-full">
+              <div class="text-amber-400 font-black text-xs mb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                <i class="fa-solid fa-lightbulb text-amber-400"></i> Správné řešení a vysvětlení:
+              </div>
+              <p class="text-xs text-slate-200 leading-relaxed font-semibold">
+                ${task.explanation}
+              </p>
+            </div>
+          `;
+        } else {
+          desc.innerHTML = `<div class="text-center">${isSkipped ? 'Úkol byl přeskočen.' : 'Žádná další šance pro toto stanoviště.'}<br><span class="text-xs text-slate-400">Přecházíte na další stanoviště.</span></div>`;
+        }
+      }
+
+      // Start Lock on Continue button (5 mins for intro task or every 3 completed questions)
+      startNatureLockCountdown(lockUntil, isCorrect, continueBtn, nextStep, totalTasks, isNatureBreak, stepInfo.isIntro);
+
+      // Show Modal with smooth animation
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => {
+        box.classList.remove('scale-95', 'opacity-0');
+        box.classList.add('scale-100', 'opacity-100');
+      }, 20);
+
+      pendingNextStepAction = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        box.classList.remove('scale-100', 'opacity-100');
+        box.classList.add('scale-95', 'opacity-0');
+
+        if (nextStep > totalTasks) {
+          switchView('congrats');
+        } else {
+          renderCurrentTask();
+        }
+      };
+
+      if (outcomeTransitionTimer) {
+        clearTimeout(outcomeTransitionTimer);
+        outcomeTransitionTimer = null;
+      }
+    }
+
+    function startNatureLockCountdown(lockUntil, isCorrect, continueBtn, nextStep, totalTasks, isNatureBreak = false, isIntro = false) {
+      if (natureLockTimerInterval) {
+        clearInterval(natureLockTimerInterval);
+        natureLockTimerInterval = null;
+      }
+
+      const natureBox = document.getElementById('outcome-nature-box');
+      const isLocked = !!(lockUntil && lockUntil > Date.now());
+
+      if (natureBox) {
+        if (isLocked) {
+          natureBox.classList.remove('hidden');
+          if (isIntro) {
+            natureBox.className = 'p-3.5 bg-industrial-950/90 border-2 border-amber-500/60 rounded-2xl text-center space-y-2.5 shadow-inner mx-auto w-full';
+            natureBox.innerHTML = `
+              <div class="flex items-center justify-center gap-2 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
+                <i class="fa-solid fa-person-walking-luggage text-amber-400 text-sm"></i>
+                <span>Čas na přípravu a sraz venku</span>
+              </div>
+              <p class="text-[11px] sm:text-xs text-slate-300 leading-relaxed font-medium">
+                Připravte se na pokoji na odchod, napijte se, vezměte vhodnou obuv a sejděte se s týmem venku. Další stanoviště začne venku.
+              </p>
+              <div class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-industrial-900 border border-amber-500/60 rounded-xl text-amber-400 font-mono font-black text-sm tracking-widest shadow">
+                <i class="fa-regular fa-clock text-amber-400"></i>
+                <span id="nature-countdown-text">05:00</span>
+              </div>
+            `;
+          } else {
+            natureBox.className = 'p-3.5 bg-emerald-950/80 border-2 border-emerald-500/60 rounded-2xl text-center space-y-2.5 shadow-inner mx-auto w-full';
+            natureBox.innerHTML = `
+              <div class="flex items-center justify-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
+                <i class="fa-solid fa-tree text-emerald-400 text-sm"></i>
+                <span>Pauza na přírodu & procházku</span>
+              </div>
+              <p class="text-[11px] sm:text-xs text-emerald-100/90 leading-relaxed font-medium">
+                Čas na krátký odpočinek od obrazovky! Rozhlédněte se po beskydských horách kolem sebe, zhluboka se nadechněte a užijte si procházku se svým týmem.
+              </p>
+              <div class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-industrial-950/90 border border-amber-500/60 rounded-xl text-amber-400 font-mono font-black text-sm tracking-widest shadow">
+                <i class="fa-regular fa-clock text-amber-400"></i>
+                <span id="nature-countdown-text">05:00</span>
+              </div>
+            `;
+          }
+        } else {
+          natureBox.classList.add('hidden');
+        }
+      }
+
+      function tick() {
+        const remainingMs = lockUntil ? Math.max(0, lockUntil - Date.now()) : 0;
+        const totalSecs = Math.ceil(remainingMs / 1000);
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
+        const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        const countdownElem = document.getElementById('nature-countdown-text');
+
+        if (totalSecs > 0) {
+          if (countdownElem) countdownElem.textContent = formatted;
+          continueBtn.disabled = true;
+          continueBtn.className = 'w-full py-3.5 px-6 rounded-xl font-black text-xs sm:text-sm text-slate-400 bg-industrial-850 border border-industrial-700 opacity-60 cursor-not-allowed shadow-inner transition flex items-center justify-center gap-2';
+          continueBtn.innerHTML = `
+            <i class="fa-solid fa-lock text-amber-400 text-xs"></i>
+            <span>${isIntro ? 'Příprava na odchod' : 'Pokračovat (pauza)'} ještě ${formatted}</span>
+          `;
+        } else {
+          // Unlocked / Ready to continue immediately
+          if (natureLockTimerInterval) {
+            clearInterval(natureLockTimerInterval);
+            natureLockTimerInterval = null;
+          }
+
+          if (natureBox && isNatureBreak) {
+            if (isIntro) {
+              natureBox.className = 'p-3.5 bg-amber-950/85 border border-amber-400/80 rounded-2xl text-center space-y-1 shadow-inner mx-auto w-full';
+              natureBox.innerHTML = `
+                <div class="text-amber-300 font-black text-xs flex items-center justify-center gap-1.5 uppercase tracking-wide">
+                  <i class="fa-solid fa-circle-check text-amber-400 text-sm"></i>
+                  <span>Čas na přípravu vypršel! Vyrazte ven.</span>
+                </div>
+                <p class="text-[11px] text-slate-300 font-medium">Sejděte se s týmem venku a spusťte první venkovní stanoviště.</p>
+              `;
+            } else {
+              natureBox.className = 'p-3.5 bg-emerald-950/85 border border-emerald-400/80 rounded-2xl text-center space-y-1 shadow-inner mx-auto w-full';
+              natureBox.innerHTML = `
+                <div class="text-emerald-300 font-black text-xs flex items-center justify-center gap-1.5 uppercase tracking-wide">
+                  <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+                  <span>Pauza splněna! Můžete vyrazit.</span>
+                </div>
+                <p class="text-[11px] text-emerald-200/90 font-medium">Příroda prozkoumána, cesta na další stanoviště je otevřená.</p>
+              `;
+            }
+          }
+
+          continueBtn.disabled = false;
+          const bgClass = isCorrect 
+            ? 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 shadow-emerald-950/50' 
+            : 'bg-orange-600 hover:bg-orange-500 active:bg-orange-700 shadow-orange-950/50';
+          continueBtn.className = `w-full py-3.5 px-6 rounded-xl font-black text-xs sm:text-sm text-white ${bgClass} shadow-lg transition flex items-center justify-center gap-2 cursor-pointer`;
+          continueBtn.innerHTML = `
+            <span>${nextStep > totalTasks ? 'Přejít na vyhodnocení' : isIntro ? 'Začít venkovní stanoviště 1' : 'Pokračovat na další stanoviště'}</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          `;
+        }
+      }
+
+      tick();
+      if (isLocked) {
+        natureLockTimerInterval = setInterval(tick, 1000);
+      }
+    }
+
+    function renderNatureBreakScreen(activeTeam, totalTasks) {
+      if (taskCountdownTimer) {
+        clearInterval(taskCountdownTimer);
+        taskCountdownTimer = null;
+      }
+      if (natureLockTimerInterval) {
+        clearInterval(natureLockTimerInterval);
+        natureLockTimerInterval = null;
+      }
+      stopAnyActiveSpeechRecognition();
+
+      const nextTaskIndex = activeTeam.currentStep - 1;
+      const stepInfo = getTaskStepDisplayInfo(activeTeam, nextTaskIndex);
+      const isIntroLock = activeTeam.currentStep === 2;
+
+      // Top bar
+      document.getElementById('game-team-name').textContent = activeTeam.roomName;
+      document.getElementById('game-team-score').textContent = `${activeTeam.score || 0} b`;
+      document.getElementById('game-step-counter').textContent = stepInfo.counterText;
+      renderStepper(activeTeam.currentStep);
+
+      // Task header
+      const badgeStepEl = document.getElementById('task-badge-step');
+      if (isIntroLock) {
+        badgeStepEl.textContent = '🚪 Příprava na odchod';
+        badgeStepEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm uppercase tracking-wide font-extrabold bg-amber-500/20 border border-amber-500/50 text-amber-400';
+        document.getElementById('task-points-val').textContent = 'Příprava na odchod';
+        document.getElementById('task-title').textContent = '🚪 Příprava na pokojích & sraz venku';
+        document.getElementById('task-desc').innerHTML = 'Úvodní fotovýzva z pokoje je splněna. Připravte se na odchod ven, vezměte si pití a vhodnou obuv. První venkovní stanoviště se odemkne po uplynutí odpočtu.';
+      } else {
+        badgeStepEl.textContent = '🌲 Pauza';
+        badgeStepEl.className = 'px-3 py-1 rounded-xl text-xs sm:text-sm uppercase tracking-wide font-extrabold bg-emerald-500/20 border border-emerald-500/50 text-emerald-400';
+        document.getElementById('task-points-val').textContent = 'Pauza na procházku';
+        document.getElementById('task-title').textContent = '🌲 Čas na přírodu a procházku';
+        document.getElementById('task-desc').innerHTML = 'Odložte na chvíli telefon, rozhlédněte se po beskydských horách kolem sebe, zhluboka se nadechněte a užijte si procházku se svým týmem.';
+      }
+
+      hideFeedback();
+      const hintContainer = document.getElementById('task-hint-container');
+      if (hintContainer) hintContainer.classList.add('hidden');
+
+      const container = document.getElementById('task-interactive-container');
+      if (isIntroLock) {
+        container.innerHTML = `
+          <div class="bg-industrial-900/90 border-2 border-amber-500/50 rounded-2xl p-5 sm:p-7 text-center space-y-4 shadow-xl">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-amber-500/20 border-2 border-amber-400 text-amber-400 text-3xl sm:text-4xl flex items-center justify-center mx-auto shadow-inner">
+              <i class="fa-solid fa-person-walking-luggage animate-pulse"></i>
+            </div>
+
+            <div class="space-y-1">
+              <h4 class="text-base sm:text-lg font-black text-white">Příprava na pokojích & sraz venku</h4>
+              <p class="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                Úvodní výzva je splněna. Připravte se na odchod ven, vezměte si pití a vhodnou obuv. Stanoviště 1 se odemkne po uplynutí času.
+              </p>
+            </div>
+
+            <div class="py-2">
+              <div class="inline-flex flex-col items-center justify-center p-4 rounded-2xl bg-industrial-950 border border-amber-500/50 min-w-[180px]">
+                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 flex items-center gap-1">
+                  <i class="fa-regular fa-clock text-amber-400"></i> Čas do začátku venkovní trasy
+                </span>
+                <span id="nature-screen-countdown" class="text-3xl sm:text-4xl font-mono font-black text-amber-400 tracking-wider">05:00</span>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-amber-400/90 font-medium flex items-center justify-center gap-2">
+              <i class="fa-solid fa-door-open text-sm"></i>
+              <span>Připravte se na společný odchod ven před budovu</span>
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="bg-industrial-900/90 border-2 border-emerald-500/50 rounded-2xl p-5 sm:p-7 text-center space-y-4 shadow-xl">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 text-3xl sm:text-4xl flex items-center justify-center mx-auto shadow-inner">
+              <i class="fa-solid fa-mountain-sun animate-pulse"></i>
+            </div>
+
+            <div class="space-y-1">
+              <h4 class="text-base sm:text-lg font-black text-white">Procházka a pauza</h4>
+              <p class="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                Vychutnejte si krásu Beskyd. Další stanoviště se automaticky odemkne po uplynutí pauzy.
+              </p>
+            </div>
+
+            <div class="py-2">
+              <div class="inline-flex flex-col items-center justify-center p-4 rounded-2xl bg-industrial-950 border border-amber-500/50 min-w-[180px]">
+                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 flex items-center gap-1">
+                  <i class="fa-regular fa-clock text-amber-400"></i> Zbývající čas pauzy
+                </span>
+                <span id="nature-screen-countdown" class="text-3xl sm:text-4xl font-mono font-black text-amber-400 tracking-wider">05:00</span>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-emerald-400/90 font-medium flex items-center justify-center gap-2">
+              <i class="fa-solid fa-person-walking text-sm"></i>
+              <span>Užijte si pobyt v Rekreačním zařízení Vítkovice a okolí</span>
+            </div>
+          </div>
+        `;
+      }
+
+      function updateNatureScreenTimer() {
+        const remainingMs = Math.max(0, (activeTeam.outcomeLockUntil || 0) - Date.now());
+        const totalSecs = Math.ceil(remainingMs / 1000);
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
+        const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        const timerEl = document.getElementById('nature-screen-countdown');
+        if (timerEl) timerEl.textContent = formatted;
+
+        if (totalSecs <= 0) {
+          clearInterval(natureLockTimerInterval);
+          natureLockTimerInterval = null;
+          renderCurrentTask();
+        }
+      }
+
+      updateNatureScreenTimer();
+      natureLockTimerInterval = setInterval(updateNatureScreenTimer, 1000);
+    }
+
+    function proceedToNextStep() {
+      const activeTeam = getActiveTeam();
+      if (activeTeam && activeTeam.outcomeLockUntil && Date.now() < activeTeam.outcomeLockUntil) {
+        const remainingSecs = Math.ceil((activeTeam.outcomeLockUntil - Date.now()) / 1000);
+        const mins = Math.floor(remainingSecs / 60);
+        const secs = remainingSecs % 60;
+        const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        const isIntroLock = activeTeam.currentStep === 2;
+        if (isIntroLock) {
+          showToast(`Čas na přípravu ještě trvá (zbývá ${timeStr}). Připravte se na odchod ven!`);
+        } else {
+          showToast(`Pauza na procházku ještě trvá (zbývá ${timeStr}). Vychutnejte si beskydskou přírodu!`);
+        }
+        return;
+      }
+
+      if (outcomeTransitionTimer) {
+        clearTimeout(outcomeTransitionTimer);
+        outcomeTransitionTimer = null;
+      }
+      if (natureLockTimerInterval) {
+        clearInterval(natureLockTimerInterval);
+        natureLockTimerInterval = null;
+      }
+      if (typeof pendingNextStepAction === 'function') {
+        const action = pendingNextStepAction;
+        pendingNextStepAction = null;
+        action();
+      }
+    }
+
+    function showFeedback(message, type = 'error') {
+      const banner = document.getElementById('task-feedback');
+      const icon = document.getElementById('feedback-icon');
+      const text = document.getElementById('feedback-message');
+
+      if (!banner) return;
+
+      banner.classList.remove('hidden', 'bg-red-950/70', 'border-red-600', 'text-red-300', 'bg-amber-950/70', 'border-amber-600', 'text-amber-300', 'border');
+
+      if (type === 'error') {
+        banner.classList.add('bg-red-950/70', 'border', 'border-red-600', 'text-red-300');
+        icon.className = 'fa-solid fa-circle-xmark text-red-400 text-lg';
+      } else {
+        banner.classList.add('bg-amber-950/70', 'border', 'border-amber-600', 'text-amber-300');
+        icon.className = 'fa-solid fa-lightbulb text-amber-400 text-lg';
+      }
+
+      text.innerHTML = message;
+    }
+
+    function hideFeedback() {
+      const banner = document.getElementById('task-feedback');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    /**
+     * ==========================================
+     * 4. GRATULACE (Konec hry) LOGIC
+     * ==========================================
+     */
+    function renderCongratsScreen() {
+      const activeTeam = getActiveTeam();
+      if (!activeTeam) {
+        switchView('registration');
+        return;
+      }
+
+      const maxScore = getMaxPossiblePoints(activeTeam);
+      document.getElementById('congrats-team-name').textContent = activeTeam.roomName;
+      document.getElementById('congrats-total-score').textContent = `${activeTeam.score || 0} b`;
+      const congratsMax = document.getElementById('congrats-max-score');
+      if (congratsMax) congratsMax.textContent = `z ${maxScore} možných`;
+      
+      const durationStr = formatTeamDuration(activeTeam.startTime, activeTeam.endTime);
+      document.getElementById('congrats-duration').textContent = durationStr;
+      document.getElementById('congrats-completed-at').textContent = `dokončeno v ${activeTeam.endTimeFormatted || '--:--'}`;
+
+      // Big Confetti Celebration
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 120,
+          spread: 100,
+          origin: { y: 0.6 },
+          colors: ['#ea580c', '#f59e0b', '#10b981', '#38bdf8']
+        });
+      }
+
+      // Photos summary
+      const photosGrid = document.getElementById('congrats-photos-grid');
+      photosGrid.innerHTML = '';
+
+      if (activeTeam.photos && Object.keys(activeTeam.photos).length > 0) {
+        document.getElementById('congrats-photos-section').classList.remove('hidden');
+
+        Object.entries(activeTeam.photos).forEach(([stepNum, photoData]) => {
+          const photoSrc = typeof photoData === 'string' ? photoData : photoData.base64;
+          const card = document.createElement('div');
+          card.className = 'bg-industrial-900 border border-industrial-800 rounded-xl overflow-hidden shadow group';
+          card.innerHTML = `
+            <div class="relative h-36 bg-black flex items-center justify-center overflow-hidden cursor-pointer" onclick="openPhotoModal('${photoSrc}', '${escapeHtml(activeTeam.roomName)}', 'Stanoviště ${stepNum}')">
+              <img src="${photoSrc}" alt="Stanoviště ${stepNum}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+              <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition"></div>
+              <span class="absolute bottom-2 left-2 bg-industrial-950/80 text-orange-400 text-[10px] font-black uppercase px-2 py-0.5 rounded border border-orange-500/30">
+                Stanoviště ${stepNum}
+              </span>
+            </div>
+          `;
+          photosGrid.appendChild(card);
+        });
+      } else {
+        document.getElementById('congrats-photos-section').classList.add('hidden');
+      }
+    }
+
+    /**
+     * ==========================================
+     * UTILITIES & LIGHTBOX
+     * ==========================================
+     */
+    function openPhotoModal(src, teamName, stepTitle) {
+      const modal = document.getElementById('photo-modal');
+      const img = document.getElementById('photo-modal-img');
+      const title = document.getElementById('photo-modal-title');
+      const subtitle = document.getElementById('photo-modal-subtitle');
+      const downloadBtn = document.getElementById('photo-modal-download');
+
+      img.src = src;
+      title.textContent = stepTitle;
+      subtitle.textContent = `Tým: ${teamName}`;
+      downloadBtn.href = src;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closePhotoModal() {
+      const modal = document.getElementById('photo-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function formatTeamDuration(startTime, endTime) {
+      if (!startTime) return '--:--';
+      const end = endTime || Date.now();
+      const diffMs = Math.max(0, end - startTime);
+      const totalMinutes = Math.floor(diffMs / (1000 * 60));
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+
+      if (hours > 0) {
+        return `${hours}h ${mins}m`;
+      }
+      return `${mins} min`;
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toast-msg');
+      if (!toast) return;
+
+      msg.textContent = message;
+      toast.classList.remove('translate-y-12', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-12', 'opacity-0');
+      }, 3000);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
