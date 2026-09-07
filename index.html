@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Databáze — úvodní hodina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14171f;
+    --ink-2:#1b1f2a;
+    --ink-3:#242a38;
+    --paper:#f4efe1;
+    --paper-2:#eae2cd;
+    --paper-line:#c9bf9f;
+    --text-dark:#1d2027;
+    --text-light:#e9e6da;
+    --text-muted:#9aa0ad;
+    --amber:#e2a33d;
+    --amber-dark:#a9741f;
+    --teal:#5fb8a6;
+    --coral:#d1616a;
+    --radius:3px;
+    --serif: 'Fraunces', serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+  }
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text-light);
+    font-family:var(--sans);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  h1,h2,h3{font-family:var(--serif); margin:0; font-weight:600;}
+  .wrap{max-width:760px; margin:0 auto; padding:0 20px;}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    background:rgba(20,23,31,0.94);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--ink-3);
+  }
+  .topbar-inner{
+    max-width:760px; margin:0 auto; padding:10px 20px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .topbar-title{
+    font-family:var(--mono); font-size:12.5px; color:var(--amber);
+    letter-spacing:.02em; white-space:nowrap;
+  }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{
+    outline:2px solid var(--amber); outline-offset:2px;
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    padding:64px 20px 40px;
+    border-bottom:1px solid var(--ink-3);
+    position:relative;
+  }
+  .hero-label{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:12px; color:var(--amber);
+    border:1px solid var(--amber-dark); padding:4px 10px; border-radius:99px;
+    margin-bottom:22px;
+  }
+  .hero-label .dot{width:6px; height:6px; border-radius:50%; background:var(--amber);}
+  .hero h1{
+    font-size:clamp(40px,9vw,64px);
+    line-height:0.98;
+    color:var(--text-light);
+    max-width:9ch;
+  }
+  .hero p.lede{
+    font-size:18px; color:var(--text-muted); max-width:48ch; margin-top:20px;
+  }
+  .hero-meta{
+    display:flex; gap:22px; margin-top:30px; flex-wrap:wrap;
+  }
+  .hero-meta div{font-family:var(--mono); font-size:12.5px; color:var(--text-muted);}
+  .hero-meta b{display:block; color:var(--text-light); font-size:15px; font-family:var(--sans); font-weight:600;}
+
+  /* card-catalog drawer visual */
+  .catalog{
+    margin-top:38px; display:flex; gap:0; overflow-x:auto; padding-bottom:6px;
+  }
+  .catalog-card{
+    flex:0 0 auto; width:118px; height:78px; background:var(--paper);
+    border:1px solid var(--paper-line); border-radius:2px 2px 0 0;
+    margin-right:-14px; position:relative; box-shadow:-3px 0 6px rgba(0,0,0,.25);
+    display:flex; align-items:flex-end; padding:6px 8px;
+  }
+  .catalog-card span{font-family:var(--mono); font-size:9.5px; color:var(--text-dark); opacity:.55;}
+  .catalog-card:nth-child(1){transform:rotate(-1.5deg);}
+  .catalog-card:nth-child(2){transform:rotate(1deg);}
+  .catalog-card:nth-child(3){transform:rotate(-0.5deg);}
+  .catalog-card:nth-child(4){transform:rotate(1.5deg);}
+  .catalog-card:last-child{margin-right:0;}
+
+  /* ---------- sections ---------- */
+  section.block{
+    padding:52px 20px 8px;
+    border-bottom:1px solid var(--ink-3);
+    scroll-margin-top:64px;
+  }
+  .block-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+    margin-bottom:22px; flex-wrap:wrap;
+  }
+  .block-num{
+    font-family:var(--mono); font-size:12px; color:var(--text-muted);
+  }
+  .block-time{
+    font-family:var(--mono); font-size:11.5px; color:var(--amber);
+    border:1px solid var(--amber-dark); padding:2px 8px; border-radius:99px;
+  }
+  section.block.bonus{
+    border-bottom:none; padding-top:34px;
+  }
+  .block-head h2{font-size:clamp(26px,4.2vw,34px); color:var(--text-light); margin-top:4px;}
+
+  p{color:var(--text-light); font-size:16px;}
+  .muted{color:var(--text-muted);}
+
+  /* record-card panel (paper) */
+  .card{
+    background:var(--paper); color:var(--text-dark); border-radius:var(--radius);
+    padding:22px 24px; margin:18px 0; border:1px solid var(--paper-line);
+    box-shadow:0 8px 20px rgba(0,0,0,.22);
+  }
+  .card h3{color:var(--text-dark); font-size:19px; margin-bottom:10px;}
+  .card p{color:var(--text-dark); font-size:15.5px;}
+  .card .tag{
+    font-family:var(--mono); font-size:10.5px; text-transform:none;
+    color:var(--amber-dark); border-bottom:2px solid var(--amber); display:inline-block;
+    margin-bottom:10px; padding-bottom:2px;
+  }
+
+  .checklist{list-style:none; padding:0; margin:0;}
+  .checklist li{
+    display:flex; gap:10px; align-items:flex-start; padding:9px 0;
+    border-top:1px solid var(--ink-3); font-size:15.5px;
+  }
+  .checklist li:first-child{border-top:none;}
+  .checklist .box{
+    flex:0 0 18px; height:18px; margin-top:2px; border:1.5px solid var(--amber); border-radius:3px;
+  }
+
+  /* reveal button */
+  .reveal-btn{
+    background:transparent; border:1px solid var(--amber-dark); color:var(--amber);
+    font-family:var(--sans); font-weight:600; font-size:14px; padding:9px 16px;
+    border-radius:99px; cursor:pointer; margin-top:6px;
+  }
+  .reveal-btn:hover{background:var(--amber); color:var(--ink);}
+  .reveal-box{
+    max-height:0; overflow:hidden; transition:max-height .35s ease;
+  }
+  .reveal-box.open{max-height:600px; margin-top:14px;}
+
+  /* schema table */
+  table.schema{
+    width:100%; border-collapse:collapse; font-family:var(--mono); font-size:13.5px;
+    margin-top:6px;
+  }
+  table.schema caption{
+    text-align:left; font-family:var(--sans); font-weight:600; color:var(--text-dark);
+    margin-bottom:8px; font-size:14.5px;
+  }
+  table.schema th{
+    background:var(--ink); color:var(--paper); text-align:left; padding:8px 10px;
+    cursor:pointer; user-select:none; position:relative;
+  }
+  table.schema th:hover{background:var(--ink-3);}
+  table.schema td{padding:7px 10px; border-bottom:1px solid var(--paper-line);}
+  table.schema tr:nth-child(even) td{background:rgba(0,0,0,.03);}
+  table.schema th.pk{color:var(--amber);}
+  .field-callout{
+    display:none; font-family:var(--sans); font-size:13.5px; background:var(--ink);
+    color:var(--paper); border-radius:4px; padding:10px 12px; margin-top:10px;
+  }
+  .field-callout.show{display:block;}
+  .field-callout b{color:var(--amber);}
+
+  /* cloze / fill-in-the-blank */
+  .cloze-text{color:var(--text-dark); font-size:15.5px; line-height:2.1;}
+  .cloze-text code{
+    background:var(--ink); color:var(--paper); font-family:var(--mono); font-size:13px;
+    padding:1px 6px; border-radius:3px;
+  }
+  select.cloze-blank{
+    font-family:var(--sans); font-size:14px; padding:4px 8px; border-radius:4px;
+    border:1.5px solid var(--paper-line); background:#fff; color:var(--text-dark); margin:0 3px;
+  }
+  select.cloze-blank.correct{border-color:var(--teal); background:rgba(95,184,166,.15);}
+  select.cloze-blank.wrong{border-color:var(--coral); background:rgba(209,97,106,.15);}
+
+  /* matching exercise */
+  .match-wrap{display:flex; gap:26px; margin-top:16px; flex-wrap:wrap;}
+  .match-col{flex:1; min-width:220px; display:flex; flex-direction:column; gap:8px;}
+  .match-col h4{font-family:var(--sans); font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin:0 0 4px;}
+  .chip{
+    text-align:left; background:var(--ink-2); border:1px solid var(--ink-3); color:var(--text-light);
+    padding:11px 13px; border-radius:6px; font-size:14.5px; cursor:pointer;
+  }
+  .chip:hover{border-color:var(--amber);}
+  .chip.selected{border-color:var(--amber); background:var(--ink-3);}
+  .chip.correct{border-color:var(--teal); background:rgba(95,184,166,.15); cursor:default;}
+  .chip.wrong{animation:shake .3s;}
+  @keyframes shake{25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+  .match-status{font-family:var(--mono); font-size:13px; color:var(--text-muted); margin-top:10px;}
+  .card .match-status{color:var(--amber-dark);}
+
+  /* search demo */
+  .search-bar{display:flex; gap:10px; margin:14px 0; flex-wrap:wrap;}
+  .search-bar input[type=text]{
+    flex:1; min-width:180px; padding:10px 12px; border-radius:6px; border:1px solid var(--paper-line);
+    font-family:var(--sans); font-size:14.5px; background:#fff; color:var(--text-dark);
+  }
+  .search-bar select{
+    padding:10px 12px; border-radius:6px; border:1px solid var(--paper-line);
+    font-family:var(--sans); font-size:14.5px; background:#fff; color:var(--text-dark);
+  }
+  .result-count{font-family:var(--mono); font-size:12px; color:var(--amber-dark); margin-bottom:6px;}
+  tr.no-match{display:none;}
+
+  /* glossary */
+  .gloss{display:grid; grid-template-columns:1fr; gap:0;}
+  .gloss dt{font-family:var(--mono); color:var(--amber); font-size:14.5px; margin-top:14px;}
+  .gloss dd{margin:4px 0 0; color:var(--text-light); font-size:15px;}
+
+  /* quiz */
+  .quiz-q{
+    background:var(--paper); color:var(--text-dark); border-radius:var(--radius);
+    padding:20px 22px; margin:16px 0; border:1px solid var(--paper-line);
+  }
+  .quiz-q p.qtext{font-weight:600; font-size:15.5px; margin:0 0 12px; color:var(--text-dark);}
+  .quiz-opt{
+    display:flex; align-items:flex-start; gap:10px; padding:8px 0; cursor:pointer; font-size:14.5px;
+  }
+  .quiz-opt input{margin-top:3px;}
+  .quiz-feedback{
+    display:none; margin-top:12px; font-size:13.5px; font-family:var(--sans);
+    padding:9px 11px; border-radius:4px;
+  }
+  .quiz-feedback.show{display:block;}
+  .quiz-feedback.ok{background:#1c5c4f; color:#f1faf7;}
+  .quiz-feedback.no{background:#7a2830; color:#fceeef;}
+  .quiz-submit{
+    background:var(--amber); color:var(--ink); border:none; font-weight:700;
+    padding:12px 22px; border-radius:99px; cursor:pointer; font-size:15px; margin:10px 0 6px;
+  }
+  .quiz-submit:hover{background:var(--amber-dark); color:var(--text-light);}
+  .quiz-result{
+    display:none; font-family:var(--mono); font-size:15px; margin-top:14px; color:var(--text-light);
+    border-left:3px solid var(--amber); padding-left:14px;
+  }
+  .quiz-result.show{display:block;}
+
+  /* reflection */
+  textarea, .card input[type=text]{
+    width:100%; min-height:90px; padding:12px 14px; border-radius:6px; border:1px solid var(--paper-line);
+    font-family:var(--sans); font-size:14.5px; background:var(--paper); color:var(--text-dark); resize:vertical;
+  }
+  .card input[type=text]{min-height:auto; padding:11px 14px;}
+  .self-scale{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+  .self-scale button{
+    background:var(--ink-2); border:1px solid var(--ink-3); color:var(--text-light);
+    padding:8px 14px; border-radius:99px; font-size:13.5px; cursor:pointer; font-family:var(--sans);
+  }
+  .self-scale button.sel{border-color:var(--amber); background:var(--amber); color:var(--ink); font-weight:600;}
+  .card input[type=text].input-error, .card textarea.input-error{border-color:var(--coral); box-shadow:0 0 0 1px var(--coral);}
+  .refl-item{margin-bottom:22px;}
+  .refl-item p{font-weight:600; margin-bottom:2px;}
+  .refl-item .field-hint{font-family:var(--sans); font-weight:400; font-size:12.5px; color:var(--coral); margin:4px 0 0; display:none;}
+  .refl-item .field-hint.show{display:block;}
+
+  footer{
+    padding:40px 20px 70px; text-align:center;
+  }
+  footer p{color:var(--text-muted); font-size:13px; font-family:var(--mono);}
+
+  @media(max-width:600px){
+    .hero{padding:46px 18px 30px;}
+    section.block{padding:40px 16px 4px;}
+    .card{padding:18px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span class="topbar-title">DATABÁZE · ÚVOD</span>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="hero-label"><span class="dot"></span>Úvodní hodina · Informatika</span>
+    <h1>Databáze</h1>
+    <p class="lede">Proč si lidstvo přestalo zapisovat všechno do sešitů a tabulek v Excelu — a jak si data ukládáme
+      tak, aby v nich šlo rychle a spolehlivě hledat.</p>
+    <div class="hero-meta">
+      <div><b>45 minut</b>délka hodiny</div>
+      <div><b>9 úseků</b>struktura hodiny</div>
+      <div><b>0 příprava</b>stačí tento prohlížeč</div>
+    </div>
+    <div class="catalog" aria-hidden="true">
+      <div class="catalog-card"><span>ŽÁCI</span></div>
+      <div class="catalog-card"><span>TŘÍDY</span></div>
+      <div class="catalog-card"><span>KNIHY</span></div>
+      <div class="catalog-card"><span>PŮJČKY</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 0 CÍLE -->
+  <section class="block" id="s0" data-time="0">
+    <div class="block-head">
+      <div>
+        <div class="block-num">00</div>
+        <h2>Co po hodině budeš umět</h2>
+      </div>
+    </div>
+    <ul class="checklist">
+      <li><span class="box"></span>Vysvětlíš, proč je databáze lepší než hromada tabulek nebo sešitů.</li>
+      <li><span class="box"></span>Poznáš a pojmenuješ tabulku, záznam, pole a primární klíč.</li>
+      <li><span class="box"></span>Zkusíš si v datech reálně něco vyhledat podle zadané podmínky.</li>
+    </ul>
+  </section>
+
+  <!-- 1 MOTIVACE -->
+  <section class="block" id="s1" data-time="5">
+    <div class="block-head">
+      <div>
+        <div class="block-num">01 · Motivace</div>
+        <h2>Od kartotéky k databázi</h2>
+      </div>
+      <span class="block-time">⏱ 5 min</span>
+    </div>
+    <p>Než existovaly počítače, ukládaly úřady, knihovny i školy informace do <strong>knih a kartoték</strong>.
+      <strong>Papírové záznamy</strong> byly přehledné, daly se číst <strong>bez elektřiny</strong> a člověk si v nich
+      mohl dělat poznámky přímo na místě.</p>
+    <div class="card">
+      <span class="tag">otázka k zamyšlení</span>
+      <p>V čem byly <strong>knihy a papírové kartotéky</strong> užitečné a v čem jsou dnes lepší <strong>databáze</strong>?</p>
+      <button class="reveal-btn" data-target="r1">V čem byly lepší knihy a v čem jsou teď lepší databáze</button>
+      <div class="reveal-box" id="r1">
+        <p>Knihy a kartotéky mají výhodu v <strong>jednoduchosti</strong>: jsou hmatatelné, snadno se čtou a fungují
+          i <strong>bez počítače</strong>. Databáze jsou ale mnohem rychlejší při <strong>hledání, třídění a filtrování</strong>
+          velkého množství údajů. Změnu stačí upravit <strong>na jednom místě</strong> a ostatní uživatelé ji mohou hned
+          vidět. Databáze také umožní, aby s údaji pracovalo <strong>více lidí najednou</strong>, a pomáhají předcházet
+          tomu, že by na různých místech zůstaly <strong>různé verze stejné informace</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 CO JE DATABAZE -->
+  <section class="block" id="s2" data-time="9">
+    <div class="block-head">
+      <div>
+        <div class="block-num">02 · Výklad</div>
+        <h2>Z čeho se databáze skládá</h2>
+      </div>
+      <span class="block-time">⏱ 9 min</span>
+    </div>
+    <p><strong>Databáze</strong> je uspořádaná sbírka dat, se kterou umí pracovat počítačový program
+      (tzv. systém řízení báze dat, zkráceně SŘBD). Nejčastěji si data představujeme jako <strong>tabulky</strong> —
+      podobně jako v sešitě, jen s přesnými pravidly. Klikni na záhlaví sloupce nebo na buňku v tabulce níže a
+      zjisti, jak se která část jmenuje.</p>
+    <div class="card">
+      <table class="schema" id="schemaTable">
+        <caption>Tabulka ŽÁCI</caption>
+        <thead>
+          <tr>
+            <th class="pk" data-info="pk">id_zaka (PK)</th>
+            <th data-info="field">jmeno</th>
+            <th data-info="field">prijmeni</th>
+            <th data-info="field">trida</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-info="record">1</td><td data-info="record">Petr</td><td data-info="record">Novák</td><td data-info="record">3.B</td>
+          </tr>
+          <tr>
+            <td data-info="record">2</td><td data-info="record">Klára</td><td data-info="record">Dvořáková</td><td data-info="record">3.B</td>
+          </tr>
+          <tr>
+            <td data-info="record">3</td><td data-info="record">Jonáš</td><td data-info="record">Bílek</td><td data-info="record">4.A</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="field-callout" id="schemaCallout"></div>
+    </div>
+    <p class="muted" style="font-size:14px;">Tip: zkus postupně kliknout na záhlaví <em>id_zaka</em>, pak na
+      jakoukoli buňku v řádku a nakonec na záhlaví <em>jmeno</em>.</p>
+
+    <div class="card" id="clozeCard1">
+      <span class="tag">doplňovací cvičení</span>
+      <p style="margin-bottom:6px; font-weight:600;">Doplň do vět správné pojmy.</p>
+      <p class="cloze-text">
+        Sbírka dat, se kterou pracuje počítačový program, se nazývá
+        <select class="cloze-blank" data-answer="databáze"><option value="">— vyber —</option></select>.
+        Uvnitř ní jsou data uspořádaná do
+        <select class="cloze-blank" data-answer="tabulek"><option value="">— vyber —</option></select>,
+        kde každý řádek představuje jeden
+        <select class="cloze-blank" data-answer="záznam"><option value="">— vyber —</option></select>
+        a každý sloupec jednu vlastnost neboli
+        <select class="cloze-blank" data-answer="pole"><option value="">— vyber —</option></select>.
+        Sloupec, který každý záznam jednoznačně odlišuje od ostatních, se jmenuje
+        <select class="cloze-blank" data-answer="primární klíč"><option value="">— vyber —</option></select>.
+      </p>
+      <button class="reveal-btn" id="clozeCheck1" type="button">Zkontrolovat</button>
+      <div class="match-status" id="clozeStatus1"></div>
+    </div>
+  </section>
+
+  <!-- 3 PROCVICENI POJMU -->
+  <section class="block" id="s3" data-time="6">
+    <div class="block-head">
+      <div>
+        <div class="block-num">03 · Procvičení</div>
+        <h2>Přiřaď 4 pojmy k definicím</h2>
+      </div>
+      <span class="block-time">⏱ 6 min</span>
+    </div>
+    <p>Nejdřív klikni na pojem vlevo, potom na definici vpravo, která k němu patří.</p>
+    <div class="card">
+      <div class="match-wrap">
+        <div class="match-col" id="matchTerms">
+          <h4>Pojem</h4>
+        </div>
+        <div class="match-col" id="matchDefs">
+          <h4>Definice</h4>
+        </div>
+      </div>
+      <div class="match-status" id="matchStatus">Vybráno 0 ze 4 párů.</div>
+    </div>
+  </section>
+
+  <!-- 4 PRAKTICKA UKAZKA -->
+  <section class="block" id="s5" data-time="5">
+    <div class="block-head">
+      <div>
+        <div class="block-num">04 · Praktická ukázka</div>
+        <h2>Vyhledávání v datech</h2>
+      </div>
+      <span class="block-time">⏱ 5 min</span>
+    </div>
+    <p>Sílu databáze poznáš, až v ní budeš potřebovat něco najít. Zkus si to na tabulce školní knihovny — napiš do
+      pole hledaný výraz nebo vyber žánr a sleduj, jak se seznam okamžitě zúží. Přesně tohle v reálné databázi
+      dělá dotaz typu <em>SELECT ... WHERE ...</em>.</p>
+    <div class="card">
+      <p><strong>Primární klíč</strong> je v této tabulce sloupec <strong>ID knihy</strong>. Každá kniha má své
+        vlastní číslo, takže ji databáze dokáže jednoznačně odlišit od ostatních záznamů.</p>
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Hledej podle názvu nebo autora…" aria-label="Hledat">
+        <select id="genreSelect" aria-label="Filtrovat podle žánru">
+          <option value="">Všechny žánry</option>
+        </select>
+      </div>
+      <div class="result-count" id="resultCount"></div>
+      <table class="schema" id="libTable">
+        <thead><tr><th>ID knihy</th><th>název</th><th>autor</th><th>rok</th><th>žánr</th></tr></thead>
+        <tbody id="libBody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <span class="tag">lehká spojovačka</span>
+      <p>Spojuj pojem s přesným údajem, který najdeš v tabulce.</p>
+      <div class="match-wrap">
+        <div class="match-col" id="matchTerms3"><h4>Pojem</h4></div>
+        <div class="match-col" id="matchDefs3"><h4>Údaj z tabulky</h4></div>
+      </div>
+      <div class="match-status" id="matchStatus3"></div>
+    </div>
+  </section>
+
+  <!-- 6 SHRNUTI -->
+  <section class="block" id="s6" data-time="4">
+    <div class="block-head">
+      <div>
+        <div class="block-num">05 · Shrnutí</div>
+        <h2>Přiřaď pojem ke školnímu příkladu</h2>
+      </div>
+      <span class="block-time">⏱ 4 min</span>
+    </div>
+    <p>Stejné pojmy jako v úseku 03, tentokrát ale napárované na konkrétní příklady z naší školní databáze.</p>
+    <div class="card">
+      <div class="match-wrap">
+        <div class="match-col" id="matchTerms2"><h4>Pojem</h4></div>
+        <div class="match-col" id="matchDefs2"><h4>Příklad ze školy</h4></div>
+      </div>
+      <div class="match-status" id="matchStatus2"></div>
+      <button class="reveal-btn" data-target="glossReveal" data-closed-label="Zobrazit přesné definice" style="margin-top:16px;">Zobrazit přesné definice</button>
+      <div class="reveal-box" id="glossReveal">
+        <dl class="gloss" style="color:var(--text-dark);">
+          <dt>databáze</dt><dd>uspořádaná sbírka dat, se kterou pracuje počítačový program</dd>
+          <dt>tabulka</dt><dd>ukládá záznamy jednoho typu (např. všechny žáky)</dd>
+          <dt>záznam (řádek)</dt><dd>jeden konkrétní případ — jeden žák, jedna kniha</dd>
+          <dt>pole (sloupec)</dt><dd>jedna vlastnost záznamu — jméno, rok, žánr</dd>
+          <dt>primární klíč (PK)</dt><dd>jednoznačně identifikuje každý záznam v tabulce</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 KVIZ -->
+  <section class="block" id="s7" data-time="6">
+    <div class="block-head">
+      <div>
+        <div class="block-num">06 · Ověř se</div>
+        <h2>Závěrečný kvíz</h2>
+      </div>
+      <span class="block-time">⏱ 6 min</span>
+    </div>
+    <p>Deset otázek, jedna správná odpověď u každé. Po vyhodnocení uvidíš nejen výsledek, ale také vysvětlení,
+      <strong>proč je odpověď správně nebo proč je potřeba ji opravit</strong>.</p>
+    <form id="quizForm"></form>
+    <button class="quiz-submit" id="quizSubmit" type="button">Vyhodnotit kvíz</button>
+    <div class="quiz-result" id="quizResult"></div>
+  </section>
+
+  <!-- 8 REFLEXE -->
+  <section class="block" id="sBonus" data-time="7">
+    <div class="block-head">
+      <div>
+        <div class="block-num">07 · Rozšíření</div>
+        <h2>Ještě chvíli přemýšlej a napiš</h2>
+      </div>
+      <span class="block-time">⏱ 7 min</span>
+    </div>
+    <p>Tři otázky k zamyšlení — odpověz vlastními větami. Bez vyplnění všech tří se nedostaneš k závěrečnému
+      protokolu.</p>
+    <div class="card">
+      <div class="refl-item">
+        <p>1. K čemu jsou databáze podle tebe dobré? Zkus to vysvětlit tak, jako bys to vysvětloval/a mladšímu
+          sourozenci.</p>
+        <textarea id="bonusQ1" placeholder="Napiš pár vět…" required></textarea>
+        <p class="field-hint" id="bonusQ1Hint">Doplň prosím odpověď na tuto otázku.</p>
+      </div>
+      <div class="refl-item">
+        <p>2. Kde všude kolem sebe si myslíš, že se databáze používají — i mimo školu?</p>
+        <textarea id="bonusQ2" placeholder="Napiš pár vět…" required></textarea>
+        <p class="field-hint" id="bonusQ2Hint">Doplň prosím odpověď na tuto otázku.</p>
+      </div>
+      <div class="refl-item">
+        <p>3. Napadá tě situace z tvého vlastního života, kde bys databázi využil/a, nebo kde nějakou už nevědomky
+          používáš?</p>
+        <textarea id="bonusQ3" placeholder="Napiš pár vět…" required></textarea>
+        <p class="field-hint" id="bonusQ3Hint">Doplň prosím odpověď na tuto otázku.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="s8" data-time="3">
+    <div class="block-head">
+      <div>
+        <div class="block-num">08 · Reflexe</div>
+        <h2>Na závěr</h2>
+      </div>
+      <span class="block-time">⏱ 3 min</span>
+    </div>
+    <div class="card">
+      <div class="refl-item">
+        <p>Jak jsi si teď jistý/jistá v pojmech tabulka, záznam, pole a primární klíč?</p>
+        <div class="self-scale" data-group="confidence">
+          <button type="button">1 – vůbec ne</button>
+          <button type="button">2</button>
+          <button type="button">3</button>
+          <button type="button">4</button>
+          <button type="button">5 – velmi jistě</button>
+        </div>
+      </div>
+      <div class="refl-item">
+        <p>Co ti dnes nebylo úplně jasné, nebo na co by ses chtěl/a ještě zeptat?</p>
+        <textarea id="reflNotes" placeholder="Napiš pár vět…"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <section class="block bonus" id="sProtocol">
+    <div class="block-head">
+      <div>
+        <div class="block-num">Na závěr</div>
+        <h2>Stáhni si svůj protokol</h2>
+      </div>
+    </div>
+    <p>Stáhne se soubor se shrnutím tvého výsledku kvízu, sebehodnocení a napsaných odpovědí — můžeš si ho uložit
+      nebo poslat učiteli.</p>
+    <div class="card">
+      <div class="refl-item">
+        <p>Jméno (povinné)</p>
+        <input type="text" id="protocolName" placeholder="Tvoje jméno a třída" required>
+        <p class="field-hint" id="nameHint">Bez jména nejde protokol stáhnout — doplň prosím jméno a třídu.</p>
+      </div>
+      <button class="quiz-submit" id="downloadProtocol" type="button">⬇ Stáhnout závěrečný protokol</button>
+      <div class="match-status" id="protocolStatus"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Úvodní hodina · Databáze · 45 minut</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- reveal buttons ---------- */
+  document.querySelectorAll('.reveal-btn[data-target]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const box = document.getElementById(btn.dataset.target);
+      const open = box.classList.toggle('open');
+      btn.textContent = open ? 'Skrýt' : (btn.dataset.closedLabel || 'V čem byly lepší knihy a v čem jsou teď lepší databáze');
+    });
+  });
+
+  /* ---------- schema click explainer ---------- */
+  const labels = {
+    pk: '<b>Primární klíč (PK)</b> — jednoznačné číslo záznamu. Žádní dva žáci ho nemají stejný, díky tomu je lze vždy přesně odlišit.',
+    field: '<b>Pole (sloupec)</b> — jedna vlastnost, kterou má každý záznam v tabulce (třeba jméno).',
+    record: '<b>Záznam (řádek)</b> — jeden konkrétní žák se všemi svými hodnotami.'
+  };
+  const callout = document.getElementById('schemaCallout');
+  document.querySelectorAll('#schemaTable th[data-info], #schemaTable td[data-info]').forEach(cell=>{
+    cell.addEventListener('click', function(){
+      callout.innerHTML = labels[cell.dataset.info];
+      callout.classList.add('show');
+    });
+  });
+
+  /* ---------- matching exercise (reusable) ---------- */
+  function buildMatching(pairs, termsColId, defsColId, statusElId){
+    const termsCol = document.getElementById(termsColId);
+    const defsCol = document.getElementById(defsColId);
+    const statusEl = document.getElementById(statusElId);
+    const shuffledTerms = [...pairs].sort(()=>Math.random()-0.5);
+    const shuffledDefs = [...pairs].sort(()=>Math.random()-0.5);
+    let selectedTerm = null;
+    let solved = 0;
+    statusEl.textContent = `Vybráno 0 z ${pairs.length} párů.`;
+
+    shuffledTerms.forEach(p=>{
+      const b = document.createElement('button');
+      b.type='button'; b.className='chip'; b.textContent=p.term; b.dataset.term=p.term;
+      b.addEventListener('click', ()=>{
+        if(b.classList.contains('correct')) return;
+        termsCol.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+        b.classList.add('selected');
+        selectedTerm = p.term;
+      });
+      termsCol.appendChild(b);
+    });
+    shuffledDefs.forEach(p=>{
+      const b = document.createElement('button');
+      b.type='button'; b.className='chip'; b.textContent=p.def; b.dataset.def=p.def;
+      b.addEventListener('click', ()=>{
+        if(b.classList.contains('correct') || !selectedTerm) return;
+        const match = pairs.find(pp=>pp.term===selectedTerm);
+        if(match.def === p.def){
+          b.classList.add('correct');
+          termsCol.querySelector(`[data-term="${CSS.escape(selectedTerm)}"]`).classList.add('correct');
+          solved++;
+          statusEl.textContent = `Vybráno ${solved} z ${pairs.length} párů.` + (solved===pairs.length ? ' Hotovo! 🎉' : '');
+        } else {
+          b.classList.add('wrong');
+          setTimeout(()=>b.classList.remove('wrong'), 300);
+        }
+        termsCol.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+        selectedTerm = null;
+      });
+      defsCol.appendChild(b);
+    });
+  }
+
+  buildMatching([
+    {term:'primární klíč', def:'jednoznačně identifikuje záznam v tabulce'},
+    {term:'záznam', def:'jeden konkrétní řádek v tabulce'},
+    {term:'pole', def:'jedna vlastnost záznamu, sloupec tabulky'},
+    {term:'databázový systém (SŘBD)', def:'program, který databázi spravuje a umí v ní hledat'}
+  ], 'matchTerms', 'matchDefs', 'matchStatus');
+
+  buildMatching([
+    {term:'tabulka', def:'celý seznam všech žáků školy'},
+    {term:'záznam', def:'údaje o jednom konkrétním žákovi'},
+    {term:'pole', def:'jméno žáka jako jedna jeho vlastnost'},
+    {term:'primární klíč', def:'školní ID, které má každý žák jiné'}
+  ], 'matchTerms2', 'matchDefs2', 'matchStatus2');
+
+  buildMatching([
+    {term:'primární klíč', def:'ID knihy (např. K-001)'},
+    {term:'název', def:'Krakatit'},
+    {term:'autor', def:'Karel Čapek'},
+    {term:'rok', def:'1924'},
+    {term:'žánr', def:'sci-fi'}
+  ], 'matchTerms3', 'matchDefs3', 'matchStatus3');
+
+  /* ---------- cloze / fill-in-the-blank (reusable) ---------- */
+  function buildCloze(cardId, checkBtnId, statusId, customBank){
+    const blanks = document.querySelectorAll('#'+cardId+' .cloze-blank');
+    const bank = customBank || Array.from(blanks).map(b=>b.dataset.answer);
+    blanks.forEach(sel=>{
+      const opts = [...bank].sort(()=>Math.random()-0.5);
+      opts.forEach(o=>{
+        const op = document.createElement('option');
+        op.value = o; op.textContent = o;
+        sel.appendChild(op);
+      });
+    });
+    document.getElementById(checkBtnId).addEventListener('click', ()=>{
+      let correct = 0;
+      blanks.forEach(sel=>{
+        const filled = sel.value !== '';
+        const ok = sel.value === sel.dataset.answer;
+        sel.classList.toggle('correct', ok && filled);
+        sel.classList.toggle('wrong', !ok && filled);
+        if(ok) correct++;
+      });
+      document.getElementById(statusId).textContent =
+        `Správně ${correct} z ${blanks.length}.` + (correct===blanks.length ? ' Skvěle!' : '');
+    });
+  }
+
+  buildCloze('clozeCard1', 'clozeCheck1', 'clozeStatus1');
+
+  /* ---------- search / filter demo ---------- */
+  const books = [
+    {id:'K-001', nazev:'Krakatit', autor:'Karel Čapek', rok:1924, zanr:'sci-fi'},
+    {id:'K-002', nazev:'Babička', autor:'Božena Němcová', rok:1855, zanr:'próza'},
+    {id:'K-003', nazev:'Saturnin', autor:'Zdeněk Jirotka', rok:1943, zanr:'humor'},
+    {id:'K-004', nazev:'Malý princ', autor:'Antoine de Saint-Exupéry', rok:1943, zanr:'pohádka'},
+    {id:'K-005', nazev:'1984', autor:'George Orwell', rok:1949, zanr:'sci-fi'},
+    {id:'K-006', nazev:'Osudy dobrého vojáka Švejka', autor:'Jaroslav Hašek', rok:1923, zanr:'humor'},
+    {id:'K-007', nazev:'Bílá nemoc', autor:'Karel Čapek', rok:1937, zanr:'drama'},
+    {id:'K-008', nazev:'Kytice', autor:'Karel Jaromír Erben', rok:1853, zanr:'poezie'}
+  ];
+  const libBody = document.getElementById('libBody');
+  const genreSelect = document.getElementById('genreSelect');
+  const resultCount = document.getElementById('resultCount');
+  const genres = [...new Set(books.map(b=>b.zanr))].sort();
+  genres.forEach(g=>{
+    const o = document.createElement('option'); o.value=g; o.textContent=g;
+    genreSelect.appendChild(o);
+  });
+  books.forEach(b=>{
+    const tr = document.createElement('tr');
+    tr.dataset.nazev = b.nazev.toLowerCase();
+    tr.dataset.autor = b.autor.toLowerCase();
+    tr.dataset.zanr = b.zanr;
+    tr.innerHTML = `<td>${b.id}</td><td>${b.nazev}</td><td>${b.autor}</td><td>${b.rok}</td><td>${b.zanr}</td>`;
+    libBody.appendChild(tr);
+  });
+  function filterLib(){
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    const g = genreSelect.value;
+    let shown = 0;
+    libBody.querySelectorAll('tr').forEach(tr=>{
+      const matchesQ = !q || tr.dataset.nazev.includes(q) || tr.dataset.autor.includes(q);
+      const matchesG = !g || tr.dataset.zanr === g;
+      const ok = matchesQ && matchesG;
+      tr.classList.toggle('no-match', !ok);
+      if(ok) shown++;
+    });
+    resultCount.textContent = `Nalezeno ${shown} z ${books.length} záznamů`;
+  }
+  document.getElementById('searchInput').addEventListener('input', filterLib);
+  genreSelect.addEventListener('change', filterLib);
+  filterLib();
+
+  /* ---------- final quiz ---------- */
+  const quiz = [
+    {
+      q:'Co v databázi nejlépe odpovídá jednomu řádku tabulky?',
+      opts:['pole','záznam','primární klíč','databáze'],
+      correct:1,
+      why:'Řádek tabulky = jeden konkrétní záznam (např. jeden žák).'
+    },
+    {
+      q:'Co je v tabulce školní knihovny primární klíč?',
+      opts:['název knihy','autor','ID knihy','žánr'],
+      correct:2,
+      why:'ID knihy je jedinečné číslo, podle kterého lze každý záznam přesně odlišit.'
+    },
+    {
+      q:'Proč má tabulka primární klíč?',
+      opts:['aby šel každý záznam jednoznačně odlišit od ostatních','aby se záznam stal polem','aby měl každý autor stejný údaj','aby se změnil žánr knihy'],
+      correct:0,
+      why:'Primární klíč zaručuje, že žádné dva záznamy nemají stejné jednoznačné číslo/identifikátor.'
+    },
+    {
+      q:'Co označuje jeden sloupec tabulky?',
+      opts:['záznam','pole','primární klíč','databázový systém'],
+      correct:1,
+      why:'Sloupec je pole, tedy jedna vlastnost záznamu, například autor nebo rok.'
+    },
+    {
+      q:'Který údaj najdeš u knihy Krakatit v knihovní tabulce?',
+      opts:['rok 1924','žánr humor','autor George Orwell','ID knihy K-008'],
+      correct:0,
+      why:'Krakatit má v tabulce rok vydání 1924.'
+    },
+    {
+      q:'Co udělá vyhledávání podle autora Karel Čapek?',
+      opts:['zobrazí knihy tohoto autora','změní primární klíč','přepíše rok vydání','vytvoří nové pole'],
+      correct:0,
+      why:'Vyhledávání zúží seznam na záznamy, jejichž autor odpovídá hledanému výrazu.'
+    },
+    {
+      q:'Co udělá filtrování podle žánru sci-fi?',
+      opts:['zobrazí jen knihy žánru sci-fi','najde všechny autory','změní názvy knih','odstraní tabulku'],
+      correct:0,
+      why:'Filtr ponechá záznamy, které mají ve sloupci žánr hodnotu sci-fi.'
+    },
+    {
+      q:'Která vlastnost nejlépe vystihuje databázi oproti papírové kartotéce?',
+      opts:['rychlé hledání a třídění velkého množství údajů','čtení bez elektřiny','poznámky tužkou přímo na kartičce','hmatatelné stránky'],
+      correct:0,
+      why:'Databáze dokáže údaje rychle vyhledat, třídit a filtrovat.'
+    },
+    {
+      q:'Jaká je výhoda knih a papírových kartoték?',
+      opts:['fungují bez počítače','více lidí v nich upravuje stejný údaj najednou','automaticky filtrují podle žánru','vždy mají primární klíč'],
+      correct:0,
+      why:'Papírové záznamy se dají číst i bez počítače a elektřiny.'
+    },
+    {
+      q:'Proč je nevýhodné mít stejná data ve více kartotékách nebo souborech?',
+      opts:['kopie se mohou rozejít a vznikne nekonzistence','každý záznam musí mít název','tabulka by měla příliš mnoho polí','primární klíč by se změnil na žánr'],
+      correct:0,
+      why:'Víc kopií stejného údaje = riziko, že se při opravě jedna kopie zapomene aktualizovat.'
+    }
+  ];
+  const quizForm = document.getElementById('quizForm');
+  let quizScore = null;
+  quiz.forEach((item, i)=>{
+    const wrap = document.createElement('div');
+    wrap.className='quiz-q';
+    let optsHtml = '';
+    item.opts.forEach((opt, j)=>{
+      optsHtml += `<label class="quiz-opt"><input type="radio" name="q${i}" value="${j}">${opt}</label>`;
+    });
+    wrap.innerHTML = `<p class="qtext">${i+1}. ${item.q}</p>${optsHtml}<div class="quiz-feedback" id="fb${i}"></div>`;
+    quizForm.appendChild(wrap);
+  });
+  document.getElementById('quizSubmit').addEventListener('click', function(){
+    let score = 0;
+    quiz.forEach((item, i)=>{
+      const chosen = quizForm.querySelector(`input[name="q${i}"]:checked`);
+      const fb = document.getElementById('fb'+i);
+      fb.classList.add('show');
+      if(chosen && parseInt(chosen.value,10) === item.correct){
+        score++;
+        fb.classList.add('ok'); fb.classList.remove('no');
+        fb.textContent = 'Správně. ' + item.why;
+      } else {
+        fb.classList.add('no'); fb.classList.remove('ok');
+        fb.textContent = (chosen ? 'Zatím ne — tato možnost neodpovídá otázce. ' : 'Odpověď nebyla vybrána. ')
+          + 'Správná odpověď: „' + item.opts[item.correct] + '“. Proč: ' + item.why;
+      }
+    });
+    const resultEl = document.getElementById('quizResult');
+    resultEl.classList.add('show');
+    quizScore = score;
+    let msg = `Výsledek: ${score} / ${quiz.length}. `;
+    if(score===quiz.length) msg += 'Pojmy máš pevně v ruce.';
+    else if(score>=2) msg += 'Dobrý základ, projdi si ještě zpětnou vazbu u otázek.';
+    else msg += 'Vrať se k shrnutí (úsek 06) a zkus kvíz znovu.';
+    resultEl.textContent = msg;
+    resultEl.scrollIntoView({behavior:'smooth', block:'center'});
+  });
+
+  /* ---------- reflection self-scale ---------- */
+  document.querySelectorAll('.self-scale').forEach(group=>{
+    group.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        group.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));
+        btn.classList.add('sel');
+      });
+    });
+  });
+
+  /* ---------- download final protocol ---------- */
+  function val(id){
+    const el = document.getElementById(id);
+    const v = el ? el.value.trim() : '';
+    return v || '(nevyplněno)';
+  }
+  function buildProtocolText(){
+    const name = document.getElementById('protocolName').value.trim() || '(bez jména)';
+    const confBtn = document.querySelector('.self-scale[data-group="confidence"] .sel');
+    const confidence = confBtn ? confBtn.textContent : '(nevyplněno)';
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('cs-CZ') + ' ' + now.toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'});
+    const scoreLine = quizScore === null
+      ? 'Kvíz nebyl vyplněn / vyhodnocen.'
+      : `Výsledek závěrečného kvízu: ${quizScore} / ${quiz.length}`;
+
+    return [
+      'ZÁVĚREČNÝ PROTOKOL — Databáze, úvodní hodina',
+      '='.repeat(48),
+      `Jméno: ${name}`,
+      `Vygenerováno: ${dateStr}`,
+      '',
+      scoreLine,
+      `Sebehodnocení jistoty v pojmech (tabulka, záznam, pole, PK): ${confidence}`,
+      '',
+      'Co ti dnes nebylo úplně jasné / na co by ses chtěl/a zeptat:',
+      val('reflNotes'),
+      '',
+      '--- Rozšiřující otázky ---',
+      '1) K čemu jsou databáze dobré?',
+      val('bonusQ1'),
+      '',
+      '2) Kde všude se databáze používají i mimo školu?',
+      val('bonusQ2'),
+      '',
+      '3) Vlastní příklad využití databáze v běžném životě:',
+      val('bonusQ3'),
+      ''
+    ].join('\n');
+  }
+  document.getElementById('protocolName').addEventListener('input', function(){
+    this.classList.remove('input-error');
+    document.getElementById('nameHint').classList.remove('show');
+  });
+  ['bonusQ1','bonusQ2','bonusQ3'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', function(){
+      this.classList.remove('input-error');
+      document.getElementById(id+'Hint').classList.remove('show');
+    });
+  });
+  document.getElementById('downloadProtocol').addEventListener('click', function(){
+    const nameInput = document.getElementById('protocolName');
+    const nameHint = document.getElementById('nameHint');
+    const requiredFields = [
+      {input: nameInput, hint: nameHint}
+    ].concat(['bonusQ1','bonusQ2','bonusQ3'].map(id=>({
+      input: document.getElementById(id),
+      hint: document.getElementById(id+'Hint')
+    })));
+
+    let firstInvalid = null;
+    requiredFields.forEach(({input, hint})=>{
+      const empty = !input.value.trim();
+      input.classList.toggle('input-error', empty);
+      hint.classList.toggle('show', empty);
+      if(empty && !firstInvalid) firstInvalid = input;
+    });
+
+    if(firstInvalid){
+      firstInvalid.focus();
+      document.getElementById('protocolStatus').textContent = 'Doplň prosím zvýrazněná pole, pak protokol stáhneš.';
+      return;
+    }
+
+    const text = buildProtocolText();
+    const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const safeName = nameInput.value.trim()
+      .toLowerCase().replace(/\s+/g,'_').replace(/[^\w\-]+/g,'');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `protokol_databaze_${safeName}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    document.getElementById('protocolStatus').textContent = 'Protokol byl stažen.';
+  });
+
+})();
+</script>
+</body>
+</html>
